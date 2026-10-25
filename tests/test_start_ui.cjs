@@ -126,6 +126,17 @@ assert(run('liabilityAssays([{kind:"Aspartate isomerization motif"}])[0].first')
   assert.equal(el('scheme').value,'kabat');assert.equal(el('isotype').value,'IGHG1');assert.equal(screens,1);
   el('run').disabled=true;el('heavy').value='CURRENT';await batchButton.onclick();
   assert.equal(el('heavy').value,'CURRENT');assert.equal(screens,1);
+  el('run').disabled=false;
+  ctx.batchJob.rows=[{name:'B',charge_basis:'variable_domain',charge_basis_note:'Variable-domain charge only.'}];
+  ctx.api=async()=>({chains:{L:'PUBLIC_L'}});
+  await batchButton.onclick();
+  assert.equal(el('heavy').value,'');assert.equal(el('isotype').value,'');assert.equal(screens,2);
+  assert(run('renderBatchRows(batchJob)').includes('Variable-domain charge only.'));
+  const selected=['Parent, reference','Pair α','50% candidate'];
+  el('batch-results').querySelectorAll=selector=>selector==='.batch-pick:checked'?selected.map(value=>({value})):[];
+  run('wireBatchRowActions(batchJob)');el('batch-reports').onclick();
+  const download=new URL(ctx.window.location,'http://localhost');
+  assert.deepEqual(download.searchParams.getAll('name'),selected);
   console.log('Served UI: pH, numeric batch sorting, source labels, stage replacement, stale load and rapid control regression checks passed.');
 })().catch(e=>{console.error(e);process.exitCode=1});
 

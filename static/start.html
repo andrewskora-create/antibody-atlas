@@ -2257,7 +2257,7 @@ function renderBatchRows(job){
       <td><input type="checkbox" class="batch-pick" value="${esc(r.name)}" aria-label="Select ${esc(r.name)}"></td>
       ${unique.map(([k], i) => i === 0
         ? `<td><button type="button" class="link batch-open" data-name="${esc(r.name)}"
-             title="Open this molecule in the full screen">${esc(r.name)}</button></td>`
+             title="Open this molecule in the full screen">${esc(r.name)}</button>${r.charge_basis_note ? `<div class="note">${esc(r.charge_basis_note)}</div>` : ''}</td>`
         : `<td>${r[k]==null ? '\u2014' : verdictCell(r[k])}</td>`).join('')}
     </tr>`).join('');
   const failed = (job.results||[]).filter(x=>x.status==='failed');
@@ -2315,7 +2315,8 @@ function wireBatchRowActions(job){
       const options = job.options || {};
       $('#scheme').value = options.scheme || 'imgt';
       $('#ph').value = options.ph ?? 7.4;
-      $('#isotype').value = options.isotype || '';
+      const row = (job.rows || []).find(r => r.name === name);
+      $('#isotype').value = row?.charge_basis === 'variable_domain' ? '' : (options.isotype || '');
       $('#models').value = '1';
       const panel = document.getElementById('batch-panel');
       if(panel) panel.open = false;
@@ -2334,7 +2335,7 @@ function wireBatchRowActions(job){
     // One selection is a PDF; several are a zip. Both are plain downloads.
     window.location = names.length === 1
       ? `/api/batch/${job.id}/report/${encodeURIComponent(names[0])}`
-      : `/api/batch/${job.id}/reports?names=${names.map(encodeURIComponent).join(',')}`;
+      : `/api/batch/${job.id}/reports?name=${names.map(encodeURIComponent).join('&name=')}`;
   };
   refresh();
 }

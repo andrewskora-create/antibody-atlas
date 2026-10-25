@@ -34,7 +34,7 @@ function metricsHTML(comp){
   }
   for(const [kind,value] of Object.entries(comp.structure?.patch_areas||{})) rows.push(metricRow(`${kind.replace(/_/g,' ')} patch area`,value,'Å²','Predicted coordinates'));
   for(const [kind,value] of Object.entries(comp.structure?.patch_counts||{})) rows.push(metricRow(`${kind.replace(/_/g,' ')} patches`,value,'','Predicted coordinates'));
-  return `<h4>What changed?</h4><p class="eng-note">pH ${esc(molecule.ph??comp.ph??'not recorded')} · ${esc(String(molecule.basis||molecule.format||'Molecular basis not recorded').replace(/\.$/,''))}. Charge and pI are sequence calculations; surface descriptors require each variant’s own coordinates.</p><div class="eng-scroll"><table class="eng-table"><thead><tr><th>Property</th><th>Parent</th><th>Variant</th><th>Change</th><th>Evidence</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>${comp.structure?.status!=='available'?`<p class="eng-note">Surface comparison: not assessed. ${esc(comp.structure?.reason||'Both variants need their own compatible structure analysis.')}</p>`:''}${comp.structure?.aggregate_reason?`<p class="eng-note">${esc(comp.structure.aggregate_reason)}</p>`:''}${(molecule.assumptions||[]).map(n=>`<p class="eng-note">${esc(n)}</p>`).join('')}<p class="eng-note">ΔΔG: not calculated. Local relaxation energies and hydrogen-bond counts do not establish folding stability or antigen-binding free energy.</p>`;
+  return `<h4>What changed?</h4><p class="eng-note">pH ${esc(molecule.ph??comp.ph??'not recorded')} · ${esc(String(molecule.basis||molecule.format||'Molecular basis not recorded').replace(/\.$/,''))}. Charge and pI are sequence calculations; surface descriptors require each variant’s own coordinates.</p><div class="eng-scroll"><table class="eng-table"><thead><tr><th>Property</th><th>Parent</th><th>Variant</th><th>Change</th><th>Evidence</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>${comp.structure?.status!=='available'?`<p class="eng-note">Surface comparison: not assessed. ${esc(comp.structure?.reason||'Both variants need their own compatible structure analysis.')}</p>`:''}${comp.structure?.aggregate_reason?`<p class="eng-note">${esc(comp.structure.aggregate_reason)}</p>`:''}${(molecule.assumptions||[]).map(n=>`<p class="eng-note">${esc(n)}</p>`).join('')}`;
 }
 function propertyIndex(analysis){
   const result=new Map();
@@ -145,12 +145,30 @@ async function createViewer(host,pair,mutations,kind){
   return panel;
 }
 function siteList(items){if(!Array.isArray(items))return 'Not assessed';return items.length?items.map(s=>`${esc(s.chain)}:${esc(s.position)} ${esc(s.kind)}${s.motif?` (${esc(s.motif)})`:''}`).join('; '):'None detected';}
-function renderComparison(state,target){
+async function comparisonEnergyHTML(comp){
+  const mutations=comp.mutations||[];
+  if(mutations.length!==1)return '<p class="eng-note">Combined folding ΔΔG is not calculated. Single-substitution estimates must not be added to predict combinations.</p>';
+  const m=mutations[0],analysis=context.analysis;
+  if(!analysis || comp.baseline_analysis_id!==analysis.analysis_id || comp.ph!==analysis.ph ||
+      analysis.chains?.[m.chain]?.sequence?.[m.position-1]!==m.from || !context.foldId)
+    return '<p class="eng-note">Folding ΔΔG is not available for this comparison’s matched parent structure.</p>';
+  const key=JSON.stringify({chain:m.chain,position:Number(m.position),to:m.to,foldId:context.foldId,ph:Number(analysis.ph)});
+  const pending=localModels.get(key);
+  if(!pending)return '<p class="eng-note">No single-substitution ΔΔG result is available yet. Model this substitution in Explore &amp; engineer to obtain a local stability estimate, then rerun this comparison.</p>';
+  try{
+    const result=await pending;
+    return '<h4>Single-substitution stability estimate</h4><p class="eng-note">From the original parent structure used in Explore &amp; engineer; the same estimate shown in the substitution shortlist. The independently predicted variant structures above provide separate surface comparisons.</p>'+freeEnergyHTML(result.free_energy);
+  }catch(error){return '<p class="eng-note">Single-substitution ΔΔG is unavailable: '+esc(error.message)+'</p>';}
+}
+async function renderComparison(state,target){
+  const stamp=generation;
+  const energies=await Promise.all((state.results||[]).map(r=>r.status==='complete'?comparisonEnergyHTML(r.comparison||{}):''));
+  if(stamp!==generation)return;
   for(const p of [...panels]) if(target.contains(p.host))removePanel(p);
   target.innerHTML=`<div class="eng-workspace"><p class="eng-note">Canonical amino-acid substitutions · compare the complete variant, including combinations · no automatic advancement decision</p>${(state.results||[]).map((r,i)=>{
     if(r.status!=='complete')return `<section class="eng-candidate"><h3>${esc(r.name)}</h3><p role="status">${esc(r.error||'Comparison not complete.')}</p></section>`;
     const c=r.comparison||{},mutations=(c.mutations||[]).map(m=>`${m.chain}:${m.from}${m.position}${m.to}`).join(', ');
-    return `<section class="eng-candidate" data-candidate="${i}"><header><div><h3>${esc(r.name)}</h3><p class="eng-mutations">${esc(mutations)}</p></div><span class="eng-tag">${r.model_status?.structure?.status==='complete'?'Variant structure predicted':'Sequence comparison'}</span></header><div data-coordinate-host></div>${metricsHTML(c)}<details class="eng-detail"><summary>Chemical liability changes</summary><dl><dt>Removed motifs</dt><dd>${siteList(c.ptm?.removed)}</dd><dt>Introduced motifs</dt><dd>${siteList(c.ptm?.added)}</dd><dt>Retained motifs</dt><dd>${siteList(c.ptm?.retained)}</dd></dl><p class="eng-note">Motifs indicate potential chemistry; they do not measure modification rates.</p></details>${(c.engineering_notes||[]).map(n=>`<p class="eng-caution">${esc(n)}</p>`).join('')}</section>`;
+    return `<section class="eng-candidate" data-candidate="${i}"><header><div><h3>${esc(r.name)}</h3><p class="eng-mutations">${esc(mutations)}</p></div><span class="eng-tag">${r.model_status?.structure?.status==='complete'?'Variant structure predicted':'Sequence comparison'}</span></header><div data-coordinate-host></div>${metricsHTML(c)}${energies[i]}<details class="eng-detail"><summary>Chemical liability changes</summary><dl><dt>Removed motifs</dt><dd>${siteList(c.ptm?.removed)}</dd><dt>Introduced motifs</dt><dd>${siteList(c.ptm?.added)}</dd><dt>Retained motifs</dt><dd>${siteList(c.ptm?.retained)}</dd></dl><p class="eng-note">Motifs indicate potential chemistry; they do not measure modification rates.</p></details>${(c.engineering_notes||[]).map(n=>`<p class="eng-caution">${esc(n)}</p>`).join('')}</section>`;
   }).join('')}<p class="eng-note">${esc(state.note||'')}</p></div>`;
   (state.results||[]).forEach((r,i)=>{
     if(r.status!=='complete')return;
@@ -235,7 +253,7 @@ async function previewLocal({chain,position,to},target){
 function focusResidue({chain,position}){
   for(const panel of panels) panel.components.forEach((c,i)=>{const r=(panel.analyses?.[i%2]?.residues||[]).find(r=>r.chain===chain&&r.sequence_position===Number(position));const sele=r?residueSelection(r.chain,r.pdb_number):null;if(sele)c.autoView(sele,0);});
 }
-const api={configure,reset,renderComparison,previewLocal,modelLocal,focusResidue,_test:{finite,num,signed,esc,residueSelection,safeURL,metricRow,metricsHTML,propertyIndex,atomProperty,resolveMutation,localEvidenceHTML,freeEnergyHTML,createViewer}};
+const api={configure,reset,renderComparison,previewLocal,modelLocal,focusResidue,_test:{finite,num,signed,esc,residueSelection,safeURL,metricRow,metricsHTML,comparisonEnergyHTML,propertyIndex,atomProperty,resolveMutation,localEvidenceHTML,freeEnergyHTML,createViewer}};
 root.AtlasEngineering=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

@@ -8,8 +8,8 @@ message: >-
   PROPERMAB where it was installed. Each is cited in the application and in
   THIRD_PARTY_NOTICES.md, and none of them is credited by citing this tool.
 type: software
-version: 0.1.0-rc2
-date-released: 2026-10-24
+version: 0.1.0-rc3
+date-released: 2026-10-25
 authors:
   - family-names: Skora
     given-names: Andrew

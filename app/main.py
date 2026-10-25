@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import quote, urlsplit
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Query
 from fastapi.responses import FileResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -1478,7 +1478,7 @@ def batch_report(job_id: str, name: str):
 
 
 @app.get("/api/batch/{job_id}/reports")
-def batch_reports(job_id: str, names: str = ""):
+def batch_reports(job_id: str, names: str = "", name: list[str] | None = Query(default=None)):
     """Reports for several molecules at once, as a zip."""
     import io
     import zipfile
@@ -1489,8 +1489,10 @@ def batch_reports(job_id: str, names: str = ""):
     job = batch_web.get(job_id)
     if not job:
         raise HTTPException(404, "That batch is not in this server session.")
-    wanted = [n.strip() for n in names.split(",") if n.strip()] or \
-        [r["name"] for r in job.get("rows", [])]
+    wanted = (name if name is not None else
+              [n.strip() for n in names.split(",") if n.strip()] or
+              [r["name"] for r in job.get("rows", [])])
+    wanted = list(dict.fromkeys(wanted))
 
     buffer = io.BytesIO()
     written, missing = [], []

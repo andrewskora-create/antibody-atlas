@@ -121,7 +121,7 @@ def make_report(data, title='Antibody developability report', structure_image=No
     text('Lower',48,95,width=90,height=13,size=8,color=MUTED)
     text('Higher signal',162,95,width=100,height=13,size=8,color=MUTED)
     text('Relative exposed hydrophobic signal; colors are not measured aggregation risk or the PROPERMAB patch surface.',48,79,width=302,height=30,size=8,color=MUTED)
-    text('Sequence properties',370,333,width=194,height=22,size=13,bold=True)
+    text('Variable-domain properties',370,333,width=194,height=22,size=11,bold=True)
     for i,(label,chain) in enumerate(list(chains.items())[:2]):
         h=chain.get('humanness',{});m=chain['metrics'];top=300-i*98
         text(f"{label} chain · human framework {h.get('percent','-')}%",370,top,width=194,height=28,size=10,bold=True)
@@ -135,7 +135,7 @@ def make_report(data, title='Antibody developability report', structure_image=No
     shown=sites[:6]
     text(f'Showing {len(shown)} of {len(sites)} unique flagged residues, ranked by screening priority, CDR location and exposure. Site is chain, residue and input position; the second column gives the region and the canonical {scheme} position. Framework sites are capped below high and searched against approved and Phase-III drugs.',48,650,height=42,size=9,color=MUTED)
     widths=[66,84,122,42,92,110]
-    row(['Site','Region / IMGT','Chemistry / motif','Exp.','Approved / Ph3','Priority'],598,widths,31,True)
+    row(['Site',f'Region / {scheme}','Chemistry / motif','Exp.','Approved / Ph3','Priority'],598,widths,31,True)
     for i,s in enumerate(shown):
         value=s.get('relative_sidechain_sasa');exp=f'{value:.0%}' if isinstance(value,(int,float)) else '?'
         kind=str(s.get('kind','PTM flag')).replace('Asparagine deamidation motif','Deamidation').replace('Aspartate isomerization motif','Isomerization').replace('Oxidation-susceptible residue','Oxidation').replace('N-linked glycosylation sequon','N-glycosylation')
@@ -151,7 +151,7 @@ def make_report(data, title='Antibody developability report', structure_image=No
         row([site_cell,region_cell,f"{kind}: {s.get('motif','')}",exp,cell,priority.upper()],567-i*34,widths,34)
         c.setFillColor(colors.HexColor(RISK.get(priority,MUTED)));c.rect(48,533-i*34,3,34,fill=1,stroke=0)
     if not shown:text('No assessed high or medium sites in the focused screen. Deferred and unassessed sites remain in the app; this does not exclude liabilities.',48,556,height=38)
-    table_bottom=567-len(shown)*34
+    table_bottom=567-len(shown)*34 if shown else 510
     text(method_line('ptm_priority'),48,table_bottom-6,width=516,height=34,size=7.5,color=MUTED)
     url=(method_citation('ptm_priority') or {}).get('primary_url')
     cmp_cite=method_citation('framework_comparator') or {}
@@ -217,8 +217,17 @@ def make_report(data, title='Antibody developability report', structure_image=No
                if isinstance(chain.get('metrics',{}).get(metric),(int,float))]
         return {'value':' | '.join(parts),'range':'-','position':'no panel'} if parts else None
 
-    GROUPS=[('Charge',[('Isoelectric point (pI)',per_chain('isoelectric_point')),
-                       ('Net charge at pH',per_chain('net_charge_at_ph')),
+    flags=data.get('molecule_flags') or {}
+    fv=flags.get('fv') or {}
+    full=flags.get('basis')=='full_length'
+    basis=('Assembled '+str((flags.get('assembly') or {}).get('format','IgG'))
+           if full else 'Variable-domain molecule')
+    def molecular_value(key, fallback):
+        value=fv.get(key)
+        return ({'value':f'{value:g}', 'range':'-', 'position':'no panel'}
+                if isinstance(value,(int,float)) else per_chain(fallback))
+    GROUPS=[('Charge',[((basis if isinstance(fv.get('pi'),(int,float)) else 'Variable-domain chain')+' pI',molecular_value('pi','isoelectric_point')),
+                       ((basis if isinstance(fv.get('net_charge_assay_ph'),(int,float)) else 'Variable-domain chain')+' charge (e)',molecular_value('net_charge_assay_ph','net_charge_at_ph')),
                        ('Fv formal charge',descriptor('fv_charge')),
                        ('Charge symmetry (VH x VL)',descriptor('fv_csp')),
                        ('VH minus VL charge',descriptor('fv_chml'))]),

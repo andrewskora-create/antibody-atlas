@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict');
+const eng=require('../static/engineering.js');
+(async()=>{
+ const analysis={analysis_id:'a',ph:7.4,chains:{H:{sequence:'AN'}}};
+ const comp={baseline_analysis_id:'a',ph:7.4,mutations:[{chain:'H',position:2,from:'N',to:'Q'}]};
+ eng.reset();eng.configure({analysis,foldId:'fold-a'});
+ let calls=0;
+ global.fetch=async()=>{calls++;return {ok:true,json:async()=>({free_energy:{status:'available',value_kcal_mol:1.234,method:'ThermoMPNN'}})};};
+ assert.match(await eng._test.comparisonEnergyHTML(comp),/No single-substitution/);
+ assert.equal(calls,0,'Comparison must not start unrequested modeling');
+ await eng.modelLocal({chain:'H',position:2,to:'Q'});
+ const shown=await eng._test.comparisonEnergyHTML(comp);
+ assert.match(shown,/\+1.23 kcal\/mol/);assert.match(shown,/original parent structure/);
+ assert.match(shown,/same estimate shown in the substitution shortlist/);assert.equal(calls,1);
+ assert.doesNotMatch(await eng._test.comparisonEnergyHTML({...comp,baseline_analysis_id:'other'}),/1.23/);
+ assert.doesNotMatch(await eng._test.comparisonEnergyHTML({...comp,ph:6}),/1.23/);
+ assert.doesNotMatch(await eng._test.comparisonEnergyHTML({...comp,mutations:[{...comp.mutations[0],from:'D'}]}),/1.23/);
+ assert.match(await eng._test.comparisonEnergyHTML({...comp,mutations:[...comp.mutations,...comp.mutations]}),/must not be added/);
+ eng.configure({analysis,foldId:'fold-b'});
+ assert.doesNotMatch(await eng._test.comparisonEnergyHTML(comp),/1.23/);
+ eng.reset();eng.configure({analysis,foldId:'fold-a'});
+ assert.doesNotMatch(await eng._test.comparisonEnergyHTML(comp),/1.23/);
+ assert.doesNotMatch(eng._test.metricsHTML(comp),/ΔΔG: not calculated/);
+ console.log('Comparison stability passed: matching cached estimate, source/pH/residue identity, no extra modeling, no combination sums, and cache invalidation.');
+})().catch(e=>{console.error(e);process.exitCode=1;});
