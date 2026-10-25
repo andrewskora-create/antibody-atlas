@@ -282,3 +282,28 @@ METHOD_SOURCES.append({
                    'that reason. Off-site bond changes are reported as protocol noise so the '
                    'signal-to-noise of each answer is visible.',
 })
+
+
+METHOD_SOURCES.extend([
+    {'id':'thermompnn', 'name':'ThermoMPNN — Kuhlman Lab and contributors',
+     'role':'Local learned single-substitution folding ΔΔG estimate from the parent chain; separate from OpenMM relaxation.',
+     'publication_title':'Transfer learning to leverage larger datasets for improved prediction of protein stability changes (2024)',
+     'publication_url':'https://doi.org/10.1073/pnas.2314853121',
+     'software_url':'https://github.com/Kuhlman-Lab/ThermoMPNN',
+     'limitations':'Single-chain learned prediction, not experimental or antigen-binding free energy. ProteinMPNN, GraphProteinDesign and LightAttention notices are retained by the installer.'},
+    {'id':'anarci', 'name':'ANARCI — Oxford Protein Informatics Group',
+     'role':'Legacy antibody numbering used by ImmuneBuilder during structure preparation.',
+     'publication_title':'ANARCI: antigen receptor numbering and receptor classification (Dunbar and Deane, 2016)',
+     'publication_url':'https://doi.org/10.1093/bioinformatics/btv552',
+     'software_url':'https://github.com/oxpig/ANARCI'},
+    {'id':'hmmer', 'name':'HMMER — Eddy Lab and contributors',
+     'role':'Profile hidden Markov model search used by legacy ANARCI.',
+     'software_url':'http://hmmer.org/'},
+    {'id':'openmm', 'name':'OpenMM — OpenMM developers and contributors',
+     'role':'Matched parent and variant local energy minimization in the Atlas repacking workflow.',
+     'software_url':'https://github.com/openmm/openmm',
+     'limitations':'Local potential-energy minimization is not a folding free-energy calculation.'},
+    {'id':'pdbfixer', 'name':'PDBFixer — OpenMM developers and contributors',
+     'role':'Structure preparation and replacement side-chain construction for local variant previews.',
+     'software_url':'https://github.com/openmm/pdbfixer'},
+])

@@ -454,12 +454,17 @@
 <div class="wrap">
   <header class="top">
     <strong style="letter-spacing:-.01em">Antibody Atlas</strong>
+    <a href="/static/acknowledgements.html" target="_blank" rel="noopener">Methods &amp; acknowledgements</a>
     <span style="font-size:13px;color:var(--muted)" id="engines">checking local engines…</span>
   </header>
 
   <h1>Screen an antibody for developability liabilities</h1>
   <p class="sub">Paste a variable domain. Review potential chemical liabilities, charge and hydrophobicity, then explore candidate substitutions with their predicted tradeoffs. Everything runs on this computer.</p>
 
+  <aside style="margin:0 0 22px;padding:12px 16px;border-left:3px solid var(--accent);background:var(--card,#fff);font-size:13px;line-height:1.6">
+    <strong>Built on community research.</strong> ANARCII/ANARCI · ImmuneBuilder · FreeSASA · Paragraph · AntiBERTy · OpenMM/PDBFixer · ThermoMPNN · NGL · OGRDB · Thera-SAbDab · UniProt. DeepSP and PROPERMAB are optional.
+    Atlas integrates these tools and adds its own screening rules. <a href="/static/acknowledgements.html" target="_blank" rel="noopener">Meet the methods, authors and original projects →</a>
+  </aside>
   <section class="card" id="input-card">
     <label for="heavy">Heavy chain <small>VH or VHH — required</small></label>
     <textarea id="heavy" spellcheck="false" placeholder="Paste a heavy-chain variable domain &mdash; protein or DNA, one FASTA record"></textarea>
@@ -742,9 +747,7 @@ function severityOf(site){
 function citeBlock(fixes, key){
   const c = (fixes.citations||{})[key];
   if(!c) return '';
-  const link = c.primary_url
-    ? ` <a href="${esc(c.primary_url)}" target="_blank" rel="noopener">${esc(c.primary_title||'source')}</a>`
-    : '';
+  const link = (c.references||[]).filter(r=>r.url||r.software_url).map(r=>` <a href="${esc(r.url||r.software_url)}" target="_blank" rel="noopener">${esc(r.title||r.name)}</a>`).join(' · ');
   return `<p class="cite"><b>How this was determined —</b> ${esc(c.basis)}. `
        + `${esc(c.methods.join(', '))}.${link}`
        + (c.local_rule ? ` ${esc(c.local_rule)}` : '') + '</p>';
@@ -2976,9 +2979,9 @@ function wireTools(analysis, fixes, foldId, structureAnalysis, structureSource='
   const methods = document.getElementById('methods-body');
   if(methods) api('/api/methods').then(data => {
     methods.innerHTML = Object.values(data.assessments||{}).filter(Boolean).map(a => `
-      <p class="cite" style="margin:0 0 10px"><b>${esc(a.label)}</b>${esc(a.basis)}.
+      <p class="cite" style="margin:0 0 10px"><b>${esc(a.label)}</b> ${esc(a.basis)}.
       ${esc((a.methods||[]).join(', '))}.
-      ${a.primary_url?` <a href="${esc(a.primary_url)}" target="_blank" rel="noopener">${esc(a.primary_title||'source')}</a>`:''}
+      ${(a.references||[]).filter(r=>r.url||r.software_url).map(r=>` <a href="${esc(r.url||r.software_url)}" target="_blank" rel="noopener">${esc(r.title||r.name)}</a>`).join(' · ')}
       ${a.local_rule?` ${esc(a.local_rule)}`:''}</p>`).join('')
       + `<p class="note">${esc(data.note||'')}</p>`;
   }).catch(()=>{ methods.innerHTML = '<p class="note">Could not load method sources.</p>'; });

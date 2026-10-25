@@ -37,9 +37,15 @@ ASSESSMENTS: dict[str, dict] = {
         'ids': ['therapeutic_precedents'],
         'local_rule': 'Each case carries its own citation and experimental conditions.',
     },
+    'folding_stability': {
+        'label': 'Predicted folding stability',
+        'basis': 'ThermoMPNN single-substitution estimate from parent-chain coordinates',
+        'ids': ['thermompnn'],
+        'local_rule': 'Not a measured energy or binding prediction; it does not reorder the initial shortlist.',
+    },
     'surface_patches': {
         'label': 'Surface patch findings',
-        'basis': 'Contact-graph clustering of exposed side chains, with PROPERMAB patch areas',
+        'basis': 'Atlas contact-graph clustering of exposed side chains; separate PROPERMAB results only when installed and run',
         'ids': ['freesasa', 'propermab', 'immunebuilder', 'charge_clearance'],
         'local_rule': 'Follow-up tiers are this project’s policy. The reference panel range is an '
                       'observed minimum to maximum, not an acceptance interval.',
@@ -55,7 +61,7 @@ ASSESSMENTS: dict[str, dict] = {
     'repack': {
         'label': 'Modelled substitution geometry',
         'basis': 'Mutant side chain built and relaxed against a rigid environment',
-        'ids': ['repack', 'immunebuilder', 'freesasa'],
+        'ids': ['repack', 'pdbfixer', 'openmm', 'immunebuilder', 'freesasa'],
         'local_rule': 'The wild type is relaxed by the identical route, so the difference '
                       'reflects the substitution rather than the protocol; an identity '
                       'control establishes the noise floor. No stability change is '
@@ -122,7 +128,7 @@ ASSESSMENTS: dict[str, dict] = {
     'structure': {
         'label': 'Predicted structure and exposure',
         'basis': 'Fv structure prediction with solvent-accessible surface area',
-        'ids': ['immunebuilder', 'freesasa', 'anarcii'],
+        'ids': ['immunebuilder', 'freesasa', 'anarcii', 'anarci', 'hmmer'],
         'local_rule': 'Predicted coordinates are a hypothesis, especially for CDR-H3.',
     },
 }

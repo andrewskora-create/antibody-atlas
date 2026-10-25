@@ -63,8 +63,9 @@ All three derive from a single upstream file:
   no terms of use. They request citation of Raybould, Marks et al., *Nucleic
   Acids Res.* (2019) gkz827, state the resource was built "under an
   open-innovation agreement" without publishing that agreement, and direct
-  licensing enquiries to opig@stats.ox.ac.uk. No licence grant means no default
-  right to redistribute a derived corpus.
+  licensing enquiries to opig@stats.ox.ac.uk. An explicit redistribution grant was not located in this review;
+  redistribution permission remains unverified. The public release therefore
+  provides a local rebuild instead of mirroring the source corpus.
 
 ### `data/clinical_frameworks.json` — 774 clinical-stage chains with IMGT numbering
 Rebuild: `python setup/build_reference_data.py --clinical`
@@ -120,7 +121,7 @@ Required copyright notice, reproduced with the data:
 Entries (9): IGHG1 (P01857-1, 330 aa), IGHG2 (P01859-1, 326 aa), IGHG3 (P01860-1, 377 aa), IGHG4 (P01861-1, 327 aa), IGKC (P01834, 107 aa), IGLC1 (P0CG04, 106 aa), IGLC2 (P0DOY2, 106 aa), IGLC3 (P0DOY3, 106 aa), IGLC7 (A0M8Q6, 106 aa)
 
 This is the one reference dataset in this project that **is** redistributable.
-Thera-SAbDab-derived corpora are not, and are rebuilt locally instead; the
+Thera-SAbDab-derived corpora have unverified redistribution terms and are rebuilt locally instead; the
 contrast is deliberate and each dataset's row states which applies.
 
 ### Two traps this dataset contains
