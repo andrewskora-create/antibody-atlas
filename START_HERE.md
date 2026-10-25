@@ -1,74 +1,54 @@
-# Antibody Atlas — start here
+# Start Antibody Atlas
 
-Antibody Atlas is a local, single-user workbench for research triage of antibody variable domains. It accepts a heavy chain, light chain, or paired VH/VL sequence and combines sequence analysis, structure prediction, local model scoring, comparisons, and a concise PDF report.
+**Preview v0.1.0-rc4.** A local research workbench with guided setup, not a signed standalone application. You do not need a paid prediction account, Claude, ChatGPT or a GPU.
 
-## Requirements and installation
+## Read the illustrated guide
 
-The current verified setup is an Apple Silicon Mac. macOS Intel, Linux, and Windows/WSL2 are untested. Windows users should use WSL2; native Windows is unsupported. Use Python 3.11 or 3.12. Internet access is needed for initial Python package installation and structure-model downloads.
+After extracting the release ZIP, open **static/user-guide.html** in your browser. It works before the server is running. Once Atlas is running, choose **Quick start & user guide** at the top of the app. An editable Word copy is in **static/docs/Antibody_Atlas_User_Guide.docx**. The guide covers setup, the first example, substitutions, panels, exports, privacy and troubleshooting.
 
-On macOS, install Apple's command-line build tools and Homebrew (https://brew.sh) first. In Terminal:
+## Mac quick start
 
-```sh
-xcode-select --install
-brew install python@3.12 hmmer
-```
+1. Download **antibody-atlas-0.1.0-rc4.zip** from [GitHub Releases](https://github.com/andrewskora-create/antibody-atlas/releases/tag/v0.1.0-rc4). Extract it and keep the whole folder together.
+2. Install [Homebrew](https://brew.sh/) if needed, including its final shell setup instructions. In Terminal, run:
 
-Add Homebrew's Python 3.12 to your `PATH` if needed (Homebrew prints the platform-specific instructions). HMMER provides `hmmscan`, required by legacy ANARCI through ImmuneBuilder; it is not used by ANARCII numbering.
+   ```sh
+   brew install python@3.12 hmmer git
+   ```
 
-On Ubuntu 24.04:
+   If build tools are requested, run `xcode-select --install` and complete installation.
+3. Double-click **Start Antibody Atlas.command** in the extracted folder. Use macOS's normal approval for this specific downloaded script if requested; do not disable Gatekeeper globally.
+4. Leave Terminal open. First setup installs dependencies and models and needs internet. Allow several minutes or longer and several GB of free disk space.
+5. When the browser opens, click **Load example**, then **Screen antibody**. Confirm the structure step finishes before interpreting structural results. Failed or unavailable evidence is not a pass.
+
+Terminal alternative: type `cd `, drag the extracted folder into Terminal, press Return, then run `bash run_local.sh`. The default address is http://127.0.0.1:8000/.
+
+## Linux and Windows
+
+Use Ubuntu 24.04 with Python 3.11 or 3.12. Windows users need [WSL2](https://learn.microsoft.com/windows/wsl/install); run the commands inside Ubuntu, not PowerShell. Native Windows is not supported for the full structure workflow.
 
 ```sh
 sudo apt update
-sudo apt install python3.12 python3.12-venv python3.12-dev build-essential hmmer
+sudo apt install python3 python3-venv python3-dev build-essential hmmer git
 ```
 
-From Terminal, enter the folder you received and run:
+Enter the actual extracted Atlas folder, then run `bash run_local.sh`. Open the printed localhost address in Chrome. See [platform status](PLATFORMS.md) for validation limits. End-to-end Windows/WSL2 and Intel Mac operation have not been verified on those machines.
+
+## Add clinical references after setup
+
+In a second terminal in the extracted Atlas folder:
 
 ```sh
-cd antibody-platform
-python3.12 run.py --setup-only
-python3.12 run.py --doctor
-python3.12 run.py --warmup --setup-only
-./run.sh
+bash run_local.sh --setup-only --references
 ```
 
-The doctor checks prerequisites; it does not install packages. Run it after Python dependency setup. `--setup-only` creates `.venv` and installs the base requirements. `--warmup` downloads structure-model weights without needing an antibody sequence. Initial setup and warmup need internet access. Open <http://127.0.0.1:8000> in a browser (set `PORT` to use another). Stop the server with Ctrl+C in Terminal. If `run.sh` is not executable, run `chmod +x run.sh` once.
+This explicitly builds the optional reference corpus from upstream data; see [data provenance](DATA_PROVENANCE.md). Save active results, stop and restart Atlas, then refresh. Until installed, clinical frequency is unavailable and substitution ranking uses residue similarity. PROPERMAB is a separate academic-only option, not part of default setup.
 
-For optional PROPERMAB Python packages, add `--with-propermab` to `--setup-only`. Its native surface-patch tools have additional prerequisites and are described in [MODULE_GUIDE.md](MODULE_GUIDE.md). The executable from the development Mac is not included in the portable ZIP.
+## Save and stop
 
-## First analysis
+Download results before stopping the server. Browser analyses are held in the session, not automatically archived. Use Ctrl+C in the server terminal to stop. Next time, use the same launcher. If port 8000 already has Atlas running, the launcher opens that session, which may be an older version. Save and stop it before switching versions, or run `PORT=8010 bash run_local.sh` for a separate local port.
 
-1. Use **Load example** first to see the workflow with a non-confidential sequence.
-2. Enter a heavy and/or light variable-domain sequence. Use standard amino-acid letters.
-3. Choose IMGT or Kabat numbering, then start analysis.
-4. Folding, AntiBERTy, and PROPERMAB run as workflow steps when enabled/available. The overall assessment is produced after the selected steps reach terminal status; a manual retry is available for a failed or interrupted step.
-5. Review numbered residues, CDRs, framework identity, sequence descriptors, PTM flags, predicted structure, and profiler results with their limitations.
-6. Download a PDF report or PDB if you need a local copy.
+## When something fails
 
-A favorable computational result is not a laboratory assay result or clinical safety conclusion. The app does not replace expression, stability, aggregation, viscosity, HIC, or other measurements.
+Run `bash run_local.sh --doctor` from the extracted folder after setup. For an interrupted installation, check internet/disk space and rerun the launcher. For missing `hmmscan`, install HMMER. Read the detailed troubleshooting section in **static/user-guide.html** before deleting or replacing anything. Report issues with a public example and remove confidential data from logs and screenshots.
 
-## Privacy
-
-The server binds to `127.0.0.1` and does not submit analysis sequences to a remote prediction API. Sequence inputs and analysis records are held in server memory; they are not saved automatically, and session structures are removed on normal shutdown. Structure-model weights may be fetched, but the sequence is not sent with that download request. Browser downloads, backups, and cloud-synced download folders are outside the app's control.
-
-The local server has no login and other processes on the same computer may be able to access it. Use a trusted computer and account. Pasting a sequence into Codex, ChatGPT, or another hosted assistant sends that content through that service. The Codex in-app browser may expose the page to Codex; use a separate browser and avoid asking Codex to inspect it when the sequence must stay outside the conversation.
-
-## Herceptin comparison
-
-The optional “Herceptin-like” label compares selected PROPERMAB surface descriptors against trastuzumab references under a user-selected tolerance (default ±10%). It is a computational screening rule, not an assay comparison, validated cutoff, or evidence of experimental equivalence. See [MODULE_GUIDE.md](MODULE_GUIDE.md).
-
-## Sharing the package
-Send the ZIP unchanged to an eligible academic recipient, along with its SHA-256 file if desired. Ask them to extract it to a local folder, read this guide, and test **Load example**. No Codex, ChatGPT, API key, or paid prediction service is required. Prefer a folder outside cloud sync for confidential work. Allow several GB of free disk space; 16 GB RAM is a practical starting point, not a measured minimum. CPU operation is supported; a GPU is not required.
-
-## Troubleshooting
-- `No module named ...`: run `python3.12 run.py --setup-only` again and preserve the installation error if it fails.
-- Missing `hmmscan`: install HMMER and restart Terminal.
-- Missing PROPERMAB patches: install the extras and native tool described in MODULE_GUIDE; the local surface heatmap is a separate calculation and remains available.
-- Reference comparisons unavailable after installing on another machine: runtime, native-binary or model differences may invalidate compatibility. Do not interpret unavailable values as low risk. Rebuild public references under the new protocol if needed.
-- Port 8000 already in use: stop the previous app Terminal with Ctrl+C, then start again.
-- The initial installation or model download fails: check internet connectivity and available disk space; no confidential sequence is needed during setup.
-
-Upstream installation references: [ImmuneBuilder](https://github.com/oxpig/ImmuneBuilder), [FreeSASA](https://github.com/freesasa/freesasa-python), [HMMER](https://hmmer.org/installation.html), [WSL](https://learn.microsoft.com/windows/wsl/install). Windows users should install Ubuntu 24.04 in WSL2 and follow the Linux steps in its terminal.
-
-## Release verification
-The ZIP was extracted and its per-file hashes were checked. Package checks and API/report tests passed from the extracted copy using the development Python environment. The included NanoShaper/CGAL build helper successfully rebuilt the native tool on Apple Silicon. A fresh dependency installation on another computer, Linux or WSL2 has not been validated. `TESTED_ENVIRONMENT.txt` records the development package versions for troubleshooting; it is not a universal lockfile.
+The core license permits academic and commercial use subject to its terms; optional tools and data retain their own terms. Atlas is provided as is, without warranty. Research predictions require experimental validation and do not establish manufacturing readiness.

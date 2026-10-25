@@ -73,7 +73,7 @@ does the create and the push together.
 Use a GitHub Release with a versioned ZIP as the prominent download, a tar.gz for Linux, and checksums. Build these assets locally without publishing:
 
 ```bash
-python tools/build_release.py --version 0.1.0-rc1 --out ../release-downloads
+python tools/build_release.py --version 0.1.0-rc4 --out ../release-downloads
 ```
 
 This reruns the clean export gate, removes optional PROPERMAB-derived panel descriptors, verifies package contents, preserves launcher executable permissions and produces both archives plus a SHA256SUMS file. It does not include installed environments, reference corpora or model weights. A maintainer must still inspect and test the extracted release. The **Prepare release downloads** Actions workflow produces the same assets as a downloadable workflow artifact, without creating or publishing a GitHub Release.

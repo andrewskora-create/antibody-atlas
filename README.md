@@ -2,13 +2,13 @@
 
 A free, local antibody developability workbench for academic labs and companies with limited engineering resources. Bring numbering, structure modeling, chemical liabilities, surface charge and hydrophobicity, and candidate substitution analysis into one workflow. Screen individual antibodies or batch panels, then prioritize the experiments that matter.
 
-**[Download the preview ZIP](https://github.com/andrewskora-create/antibody-atlas/releases/download/v0.1.0-rc3/antibody-atlas-0.1.0-rc3.zip)** · **[Setup instructions](#download-and-start)** · **[Release notes and checksums](https://github.com/andrewskora-create/antibody-atlas/releases/tag/v0.1.0-rc3)**
+**[Download the preview ZIP](https://github.com/andrewskora-create/antibody-atlas/releases/download/v0.1.0-rc4/antibody-atlas-0.1.0-rc4.zip)** · **[Setup instructions](#download-and-start)** · **[Release notes and checksums](https://github.com/andrewskora-create/antibody-atlas/releases/tag/v0.1.0-rc4)**
 
 **Built on community research.** Atlas integrates the work of the authors of ANARCII/ANARCI, ImmuneBuilder, FreeSASA, Paragraph, AntiBERTy, OpenMM/PDBFixer, ThermoMPNN, NGL, OGRDB, Thera-SAbDab and UniProt, with optional DeepSP and PROPERMAB. The underlying tools and models are their work; Atlas provides the integration, interface and labeled screening rules. [Methods, authors and original sources](MODULE_GUIDE.md#methods-authors-and-original-sources) · [Third-party notices](THIRD_PARTY_NOTICES.md). Please cite the methods you use, not just Atlas.
 
 **Local by design.** Sequences and coordinates stay on your computer during analysis. Internet access is needed to install dependencies and download model files. No account or prediction-service subscription is required.
 
-**Preview v0.1.0-rc3:** tested on Apple Silicon macOS with Python 3.12 and Chrome. Linux/WSL support is subject to the repository's platform checks; native Windows is not a supported complete structure workflow. This is a guided source installation, not a signed standalone desktop application.
+**Preview v0.1.0-rc4:** tested on Apple Silicon macOS with Python 3.12 and Chrome. Linux/WSL support is subject to the repository's platform checks; native Windows is not a supported complete structure workflow. This is a guided source installation, not a signed standalone desktop application.
 
 Atlas is a starting point for ranking, prioritization and experimental focus. It does not replace a targeted or full antibody-engineering campaign, and it does not establish manufacturing readiness. Code is available under Apache-2.0 without a software license fee and without warranty. Third-party components retain their own terms.
 
@@ -47,6 +47,8 @@ Use **Preview local structure** to build and identically relax parent and mutant
 Charge comparisons report the whole Fv or assembled H2L2 molecule at the selected pH, alongside both input-chain values. Constant-region sequence assembly changes the charge calculation; it does not add constant-domain coordinates to an Fv model. Missing results remain explicit.
 
 ## Download and start
+
+**New to Atlas?** Follow [Start here](START_HERE.md). The illustrated user guide is included as **static/user-guide.html** in the ZIP and opens without running Atlas. Inside the app, choose **Quick start & user guide**. It covers your first example, substitutions, batch screening, saving results and troubleshooting.
 
 **For a first installation, download the versioned ZIP from GitHub Releases, unzip it, and keep the whole folder together.** You do not need to clone a repository or use Git for routine startup. Git is still required during setup because two dependencies install from pinned upstream commits.
 

@@ -2,7 +2,7 @@
 
 The full workflow targets macOS and Linux. Windows users should use WSL2.
 The table describes intended engine availability, not proof of a clean installation on every platform.
-The current release was exercised on Apple Silicon; full Linux installation is checked by CI.
+The rc3 scientific workflow was exercised after a fresh dependency installation on Apple Silicon macOS with Python 3.12 and Chrome. Automated tests cover Linux Python 3.11/3.12 and macOS/Linux startup. End-to-end operation on Intel Macs and an actual Windows/WSL2 computer has not been verified. The rc4 update adds onboarding documentation and a guide link; it does not expand platform validation.
 Native Windows is not a supported full-workflow release.
 
 | | macOS | Linux | Windows (WSL2) | Windows (native) |
@@ -63,7 +63,7 @@ The script tells you if it is missing and runs without it.
 
 ## Windows
 
-**WSL2 is the recommended route**, and gives you everything. Inside a WSL2
+**WSL2 is the intended route for the complete workflow**, but has not been verified on an actual Windows machine. Inside a WSL2
 Ubuntu shell:
 
 ```bash
@@ -114,7 +114,7 @@ failing later at analysis time.
   present, otherwise the `antiberty` package's own, which it downloads on
   first use. Nothing to install by hand.
 - **Reference data** (clinical precedent and the comparison panel) is built on
-  your machine from Oxford's CSV because it is not redistributable. Run
+  your machine from Oxford's CSV because it is not included in the public archive; review upstream terms in DATA_PROVENANCE.md. Run
   `.venv/bin/python run.py --setup-only --references` explicitly to build it.
   It is not downloaded by the default launcher.
 - **Bind to localhost only.** There is no authentication; this is a

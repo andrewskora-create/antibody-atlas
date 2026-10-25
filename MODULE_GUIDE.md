@@ -1,5 +1,7 @@
 # Antibody Atlas — module guide
 
+For installation and a practical walkthrough, start with [Start here](START_HERE.md) or open **static/user-guide.html** from the release folder. The same guide is linked at the top of the app. This document is the technical methods reference.
+
 Atlas integrates the work of the scientific community. The [methods and acknowledgements catalog](static/acknowledgements.html) links the original projects and publications, distinguishes optional tools, and identifies Atlas-authored rules. Please cite each underlying method used.
 
 This guide describes what each module calculates and what its output can support. The application is local and intended for research triage, not clinical decisions or assay replacement. After analysis starts, enabled structure, AntiBERTy, and PROPERMAB steps run through the workflow; the overall assessment waits until selected steps reach terminal status. Failed or interrupted steps can be retried manually.
