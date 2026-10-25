@@ -2,7 +2,13 @@
 
 A free, local antibody developability workbench for academic labs and companies with limited engineering resources. Bring numbering, structure modeling, chemical liabilities, surface charge and hydrophobicity, and candidate substitution analysis into one workflow. Screen individual antibodies or batch panels, then prioritize the experiments that matter.
 
-**[Download the preview ZIP](https://github.com/andrewskora-create/antibody-atlas/releases/download/v0.1.0-rc4/antibody-atlas-0.1.0-rc4.zip)** · **[Setup instructions](#download-and-start)** · **[Release notes and checksums](https://github.com/andrewskora-create/antibody-atlas/releases/tag/v0.1.0-rc4)**
+## New here? Read the setup guide first
+
+**[Read the quick start](START_HERE.md)** · **[Download the illustrated Word guide](https://github.com/andrewskora-create/antibody-atlas/releases/download/v0.1.0-rc4/Antibody_Atlas_User_Guide.docx)**
+
+The guide covers prerequisites, launch, your first example, optional clinical references and troubleshooting. You can read it before installing anything. After extracting the ZIP, open **static/user-guide.html** in your browser, or use **Quick start & user guide** at the top of the running app.
+
+**[Download Atlas ZIP](https://github.com/andrewskora-create/antibody-atlas/releases/download/v0.1.0-rc4/antibody-atlas-0.1.0-rc4.zip)** · **[Release notes and checksums](https://github.com/andrewskora-create/antibody-atlas/releases/tag/v0.1.0-rc4)**
 
 **Built on community research.** Atlas integrates the work of the authors of ANARCII/ANARCI, ImmuneBuilder, FreeSASA, Paragraph, AntiBERTy, OpenMM/PDBFixer, ThermoMPNN, NGL, OGRDB, Thera-SAbDab and UniProt, with optional DeepSP and PROPERMAB. The underlying tools and models are their work; Atlas provides the integration, interface and labeled screening rules. [Methods, authors and original sources](MODULE_GUIDE.md#methods-authors-and-original-sources) · [Third-party notices](THIRD_PARTY_NOTICES.md). Please cite the methods you use, not just Atlas.
 

@@ -4,6 +4,8 @@
 
 ## Read the illustrated guide
 
+**[Download the editable Word guide directly](https://github.com/andrewskora-create/antibody-atlas/releases/download/v0.1.0-rc4/Antibody_Atlas_User_Guide.docx)**. No installation is needed to read it.
+
 After extracting the release ZIP, open **static/user-guide.html** in your browser. It works before the server is running. Once Atlas is running, choose **Quick start & user guide** at the top of the app. An editable Word copy is in **static/docs/Antibody_Atlas_User_Guide.docx**. The guide covers setup, the first example, substitutions, panels, exports, privacy and troubleshooting.
 
 ## Mac quick start
