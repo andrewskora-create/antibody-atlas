@@ -1,0 +1,54 @@
+name: Bug report
+description: Something produced a wrong result, crashed, or would not install.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, please run `python scripts/doctor.py` — a good fraction
+        of problems are a missing HMMER or an uninstalled optional component,
+        and it names them directly.
+
+        **Do not paste an unpublished sequence into a public issue.** If the
+        problem is sequence-specific, use a public sequence that reproduces it,
+        or describe the property that matters (CDR-H3 length, an unusual
+        insertion, a non-standard residue).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: >-
+        A public sequence, or the steps. If it is an install problem, the
+        command and the full error.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `python scripts/doctor.py`
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS and Python version
+      placeholder: "macOS 15.2 arm64, Python 3.12.4"
+    validations:
+      required: true
+  - type: checkboxes
+    id: optional-components
+    attributes:
+      label: Which optional components are installed
+      options:
+        - label: Reference corpora (`setup/build_reference_data.py`)
+        - label: DeepSP (`setup/fetch_deepsp.py`)
+        - label: PROPERMAB (`setup/fetch_optional.py --propermab`)

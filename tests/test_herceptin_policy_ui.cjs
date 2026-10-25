@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const selector={};const root={innerHTML:'',querySelector:()=>selector,querySelectorAll:()=>[]};
+const ctx=vm.createContext({window:{addEventListener:()=>{}},document:{getElementById:()=>root},fetch:async()=>({json:async()=>({})}),console});
+vm.runInContext(fs.readFileSync('static/app.js','utf8'),ctx);
+vm.runInContext(`report={analysis_id:'public',chains:{H:{}}};renderPatchRisk({categories:[{kind:'hydrophobic',label:'Hydrophobic',priority:'lower',call:'Low comparative risk — Herceptin-like',concern:'Screening',reasons:[],comparisons:[],action:'HIC'}],sources:[],definition:'policy',limitation:'screen',herceptin_tolerance_percent:10});`,ctx);
+assert(root.innerHTML.includes('value="10" selected'));assert(root.innerHTML.includes('Low comparative risk'));
+assert.equal(vm.runInContext('assessmentRequest().herceptin_tolerance_percent',ctx),10);
+let updates=0;ctx.refreshAssessment=()=>{updates++};selector.onchange({target:{value:'5'}});
+assert.equal(vm.runInContext('assessmentRequest().herceptin_tolerance_percent',ctx),5);assert.equal(updates,1);
+console.log('Herceptin default, rendered call and assessment-only tolerance update verified.');

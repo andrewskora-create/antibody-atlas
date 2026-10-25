@@ -1,0 +1,199 @@
+{
+  "title": "Published PROPERMAB study ranges",
+  "source_url": "https://doi.org/10.1080/19420862.2025.2474521",
+  "dataset_url": "https://pmc.ncbi.nlm.nih.gov/articles/instance/11901398/bin/KMAB_A_2474521_SM9230.zip",
+  "retrieved_date": "2026-10-04",
+  "note": "Observed ranges calculated from the published supplementary CSVs, not author-defined acceptance limits. The HIC study averaged five structures. These published values are separate from the protocol-matched local reference panel and do not set risk categories.",
+  "method_note": "The paper defines patches using minimum areas of 40 \u00c5\u00b2 (hydrophobic) and 20 \u00c5\u00b2 (charged). These define which patches are counted, not a safe total area. Published APBS 3.0.0 and structure sampling differ from this local implementation.",
+  "datasets": [
+    {
+      "name": "HIC study: 135 clinical-stage antibodies",
+      "filename": "hic_rt_dataset.csv",
+      "sha256": "a635e2d3a5c110b68c912e53a01f82c4b10332914efe54da7fd0146c91ee9c9c",
+      "ranges": [
+        {
+          "key": "hyd_patch_area",
+          "label": "Hydrophobic patch area",
+          "n": 135,
+          "min": 331.37516674,
+          "median": 626.9550428599999,
+          "max": 899.0229598400001,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "hyd_patch_area_cdr",
+          "label": "Hydrophobic patch area near CDR",
+          "n": 135,
+          "min": 104.644476542,
+          "median": 324.0815263,
+          "max": 588.01147188,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "pos_patch_area",
+          "label": "Positive patch area",
+          "n": 135,
+          "min": 180.52317055999998,
+          "median": 419.32707762,
+          "max": 1100.5609596,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "pos_patch_area_cdr",
+          "label": "Positive patch area near CDR",
+          "n": 135,
+          "min": 34.610770792,
+          "median": 164.0915258,
+          "max": 736.25720732,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "neg_patch_area",
+          "label": "Negative patch area",
+          "n": 135,
+          "min": 221.32091185999997,
+          "median": 531.5521492800001,
+          "max": 1566.9051703999999,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "neg_patch_area_cdr",
+          "label": "Negative patch area near CDR",
+          "n": 135,
+          "min": 18.266503446,
+          "median": 261.57584292,
+          "max": 1202.3941288,
+          "unit": "\u00c5\u00b2"
+        }
+      ]
+    },
+    {
+      "name": "Ab21 viscosity study: 21 antibodies",
+      "filename": "ab21_viscosity_dataset.csv",
+      "sha256": "c52b67abbd3955d30be61fb7136d48d8062507fe99c2da6d035d24d69b16468c",
+      "ranges": [
+        {
+          "key": "hyd_patch_area",
+          "label": "Hydrophobic patch area",
+          "n": 21,
+          "min": 300.9832730114539,
+          "median": 630.7646282884461,
+          "max": 916.4198114345327,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "hyd_patch_area_cdr",
+          "label": "Hydrophobic patch area near CDR",
+          "n": 21,
+          "min": 169.04296057395212,
+          "median": 316.4355659158481,
+          "max": 550.0174705996445,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "pos_patch_area",
+          "label": "Positive patch area",
+          "n": 21,
+          "min": 203.95105608757257,
+          "median": 360.961161009027,
+          "max": 565.1972087507638,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "pos_patch_area_cdr",
+          "label": "Positive patch area near CDR",
+          "n": 21,
+          "min": 64.7196230073658,
+          "median": 144.9742422102955,
+          "max": 312.9153495700763,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "neg_patch_area",
+          "label": "Negative patch area",
+          "n": 21,
+          "min": 264.19843667513413,
+          "median": 522.5135698349766,
+          "max": 1097.9433778663702,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "neg_patch_area_cdr",
+          "label": "Negative patch area near CDR",
+          "n": 21,
+          "min": 85.88646198762582,
+          "median": 237.07020266816988,
+          "max": 718.907674850457,
+          "unit": "\u00c5\u00b2"
+        }
+      ]
+    },
+    {
+      "name": "PDGF38 viscosity study: 38 related variants",
+      "filename": "pdgf38_viscosity_dataset.csv",
+      "sha256": "6688649804fc872c3268a7875f5a9631b7c9802af51659ac904068662f763b32",
+      "ranges": [
+        {
+          "key": "hyd_patch_area",
+          "label": "Hydrophobic patch area",
+          "n": 38,
+          "min": 665.1044909752702,
+          "median": 748.3035288424338,
+          "max": 876.8687230274232,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "hyd_patch_area_cdr",
+          "label": "Hydrophobic patch area near CDR",
+          "n": 38,
+          "min": 508.6608818585288,
+          "median": 536.2563453038404,
+          "max": 615.8191821329407,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "pos_patch_area",
+          "label": "Positive patch area",
+          "n": 38,
+          "min": 156.90947499681766,
+          "median": 306.57928401783505,
+          "max": 407.94135397076286,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "pos_patch_area_cdr",
+          "label": "Positive patch area near CDR",
+          "n": 38,
+          "min": 46.687348535233184,
+          "median": 107.3694136914956,
+          "max": 189.88111567561117,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "neg_patch_area",
+          "label": "Negative patch area",
+          "n": 38,
+          "min": 452.07546839711296,
+          "median": 687.5228401817026,
+          "max": 1486.8476486630582,
+          "unit": "\u00c5\u00b2"
+        },
+        {
+          "key": "neg_patch_area_cdr",
+          "label": "Negative patch area near CDR",
+          "n": 38,
+          "min": 279.5534233982919,
+          "median": 459.6321022925354,
+          "max": 1146.3849125602605,
+          "unit": "\u00c5\u00b2"
+        }
+      ]
+    }
+  ],
+  "herceptin": {
+    "name": "Herceptin (trastuzumab)",
+    "hic_rt_min": 9.7,
+    "material": "Recombinant IgG1 in the Jain dataset used by PROPERMAB; not a measurement of this input or a claim about every marketed formulation.",
+    "source_url": "https://doi.org/10.1080/19420862.2025.2474521"
+  }
+}

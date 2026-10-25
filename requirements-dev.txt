@@ -1,0 +1,16 @@
+# Development and setup-time dependencies. Not needed to run the server.
+#
+# These were in no requirements file at all. README.md and CONTRIBUTING.md
+# both tell a fresh clone to run `python -m pytest tests/ -q`, and the CI
+# workflow installed pytest with its own `pip install pytest h5py` line, so
+# the gap never showed up in CI -- only on a real clean install, where the
+# documented command fails with "No module named pytest".
+#
+#   python -m pip install -r requirements-dev.txt
+
+pytest>=8,<9
+
+# setup/fetch_deepsp.py only. It converts the published Keras .h5 weights to
+# numpy once, at install time. Neither the server nor the test suite imports
+# it, so leave it out if you are not fetching DeepSP.
+h5py>=3.10

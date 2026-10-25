@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+title: "Antibody Atlas: a local developability screen for antibody variable domains"
+message: >-
+  If this software contributed to published work, please cite it, and
+  independently cite the methods it calls. Most of the science here is other
+  people's: ANARCII for numbering, ImmuneBuilder for structure, Paragraph for
+  paratope prediction, ThermoMPNN for predicted folding stability, DeepSP for sequence-only spatial descriptors, and
+  PROPERMAB where it was installed. Each is cited in the application and in
+  THIRD_PARTY_NOTICES.md, and none of them is credited by citing this tool.
+type: software
+version: 0.1.0-rc1
+date-released: 2026-10-24
+authors:
+  - family-names: Skora
+    given-names: Andrew
+license: Apache-2.0
+repository-code: "https://github.com/andrewskora-create/antibody-atlas"
+abstract: >-
+  Antibody Atlas screens antibody variable domains for chemical liabilities and
+  proposes ranked substitutions for them, running entirely on the user's own
+  machine. It consolidates numbering, germline and humanness, solvent exposure,
+  PTM motifs, predicted paratope contacts and clinical precedent into a single
+  per-residue table, so a proposed fix can be read against what else sits at
+  that position. Molecule-level charge, hydrophobicity and spatial aggregation
+  descriptors are reported alongside, optionally on a full-length H2L2 assembly
+  built from wild-type human constant regions. Every priority it emits is a
+  screening heuristic for ordering experiments, not a prediction of
+  aggregation, clearance, immunogenicity or viscosity.
+keywords:
+  - antibody developability
+  - post-translational modification
+  - protein engineering
+  - IMGT numbering
+  - aggregation propensity

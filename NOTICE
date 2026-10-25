@@ -1,0 +1,38 @@
+Antibody Atlas
+Copyright 2026 Andrew Skora
+
+This software was developed independently by the author, at no cost and outside
+any employment or paid engagement. Copyright vests in the author. Apache-2.0 is
+the recommended licence; see COMPLIANCE.md section 6.
+
+The antibody molecules this software has been used to analyse are separate from
+the software and are not included here. That work is a collaboration with Fred
+Hutchinson Cancer Center under a provisional application that has not published.
+Run tools/make_oss_export.py before any public push; it refuses to emit an
+export containing those sequences.
+
+This product includes software and data developed by third parties. Their
+licences and required notices are reproduced in THIRD_PARTY_NOTICES.md, and
+dataset terms in DATA_PROVENANCE.md. Nothing in this NOTICE or in the project
+licence grants any right over a third-party component.
+
+Two components are deliberately NOT distributed with this software and are
+installed by the user under terms set by their owners:
+
+  - PROPERMAB (Regeneron Pharmaceuticals, Inc.) - academic research use only,
+    commercial use prohibited. See USE_TIERS.md.
+  - NanoShaper (GPLv3) and CGAL, required only by the PROPERMAB path.
+
+Reference corpora derived from Oxford Thera-SAbDab are likewise not
+distributed, because no licence grant is published for that source. They are
+rebuilt locally; see DATA_PROVENANCE.md.
+
+Model weights are fetched at setup rather than committed. AntiBERTy's
+checkpoint and DeepSP's trained models are both MIT-licensed and could be
+redistributed; they are fetched because of their size. The required MIT notices
+are reproduced in THIRD_PARTY_NOTICES.md regardless.
+
+If you use this software, please cite the upstream methods it depends on. These
+are listed in MODULE_GUIDE.md. In particular, Thera-SAbDab asks for citation of
+Raybould, Marks et al., Nucleic Acids Res. (2019) gkz827, and DeepSP asks for
+Kalejaye et al., Comput Struct Biotechnol J (2024) doi:10.1016/j.csbj.2024.05.029.

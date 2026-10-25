@@ -1,0 +1,24 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const elements=new Map();
+const element=id=>{if(!elements.has(id))elements.set(id,{disabled:false,hidden:false,textContent:'',innerHTML:'',querySelectorAll:()=>[]});return elements.get(id)};
+const ctx=vm.createContext({console,document:{getElementById:element},window:{addEventListener:()=>{}},fetch:async()=>({json:async()=>({})}),setTimeout:()=>{},Map,Set,Blob});
+vm.runInContext(fs.readFileSync('static/app.js','utf8'),ctx);
+vm.runInContext(`renderChain=()=>{};renderPrecedents=()=>{};refreshAssessment=()=>{};pollFold=async()=>{throw Error('Stale fold was polled')};report={analysis_id:'old',chains:{H:{sequence:'PUBLIC'}},provenance:{structure_model:'old'},structure_analysis:{old:true},propermab:{old:true}};`,ctx);
+let resolve;
+ctx.fetch=()=>new Promise(r=>resolve=r);
+(async()=>{
+ const pending=vm.runInContext('fold()',ctx);
+ assert.equal(vm.runInContext('report.structure_analysis',ctx),undefined);
+ assert.equal(vm.runInContext('report.propermab',ctx),undefined);
+ assert.equal(vm.runInContext('report.provenance.structure_model',ctx),undefined);
+ assert.equal(element('propermab').disabled,true);
+ vm.runInContext("report={analysis_id:'new'};foldGeneration++;",ctx);
+ resolve({ok:true,json:async()=>({id:'old-job'})});await pending;
+ assert.equal(vm.runInContext('activeJob',ctx),null);
+ ctx.fetch=async()=>{throw Error('Intentional new-analysis failure')};
+ await vm.runInContext('analyze()',ctx);
+ assert.equal(vm.runInContext('report',ctx),null);
+ assert.equal(element('results').hidden,true);
+ assert.equal(vm.runInContext('activeJob',ctx),null);
+ console.log('Automatic-fold stale submission, invalidation and failed reanalysis checks passed.');
+})().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,0 +1,2988 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Antibody developability screen</title>
+<style>
+  :root{
+    --bg:#fbfbfa; --panel:#fff; --ink:#1a1a18; --muted:#6b6b66; --line:#e4e4e0;
+    --accent:#1f5f4f; --accent-ink:#fff;
+    --high:#8c2f23; --high-bg:#fdf1ef; --mid:#8a5a12; --mid-bg:#fdf7ec;
+    --low:#2c6248; --low-bg:#f0f7f2; --neutral-bg:#f5f5f3;
+    /* Germline. Framework deviation is the only state that gets colour:
+       a matured antibody is supposed to differ in its CDRs, so marking
+       those the same amber would bury the framework positions that matter.
+       Never --high: red is reserved for the screen's own high-priority
+       liability calls, and a back-mutation is a reason to look, not a
+       liability. */
+    --gl-fr:#8a5a12; --gl-fr-bg:#fdf7ec; --gl-cdr:#6b6b66; --gl-cdr-line:#c9c9c3;
+    /* Basis badges. Aliased to the existing hues on purpose: the semantics
+       deserve their own names, the palette does not need a sixth colour. */
+    --basis-measured:#2c6248; --basis-measured-bg:#f0f7f2;
+    --basis-modelled:#8a5a12; --basis-modelled-bg:#fdf7ec;
+    --basis-seq:#6b6b66; --basis-seq-bg:#f5f5f3;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#17181a; --panel:#1f2023; --ink:#ecece8; --muted:#9a9a94; --line:#323337;
+      --accent:#5fae96; --accent-ink:#10110f;
+      --high:#f0948a; --high-bg:#2b1d1b; --mid:#e3bd7c; --mid-bg:#2a241a;
+      --low:#88ccae; --low-bg:#1a2622; --neutral-bg:#26272a;
+      --gl-fr:#e3bd7c; --gl-fr-bg:#2a241a; --gl-cdr:#9a9a94; --gl-cdr-line:#45464a;
+      --basis-measured:#88ccae; --basis-measured-bg:#1a2622;
+      --basis-modelled:#e3bd7c; --basis-modelled-bg:#2a241a;
+      --basis-seq:#9a9a94; --basis-seq-bg:#26272a;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#17181a; --panel:#1f2023; --ink:#ecece8; --muted:#9a9a94; --line:#323337;
+    --accent:#5fae96; --accent-ink:#10110f;
+    --high:#f0948a; --high-bg:#2b1d1b; --mid:#e3bd7c; --mid-bg:#2a241a;
+    --low:#88ccae; --low-bg:#1a2622; --neutral-bg:#26272a;
+    --gl-fr:#e3bd7c; --gl-fr-bg:#2a241a; --gl-cdr:#9a9a94; --gl-cdr-line:#45464a;
+    --basis-measured:#88ccae; --basis-measured-bg:#1a2622;
+    --basis-modelled:#e3bd7c; --basis-modelled-bg:#2a241a;
+    --basis-seq:#9a9a94; --basis-seq-bg:#26272a;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:40px 16px 96px}
+  header.top{display:flex; justify-content:space-between; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:8px}
+  h1{font-size:clamp(26px,4.2vw,36px); line-height:1.15; margin:.2em 0 .3em; letter-spacing:-.02em}
+  .sub{color:var(--muted); margin:0 0 28px; max-width:60ch}
+  a{color:var(--accent)}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px; margin:0 0 18px}
+  label{display:block; font-weight:600; font-size:14px; margin:14px 0 6px}
+  label small{font-weight:400; color:var(--muted)}
+  textarea{
+    width:100%; min-height:86px; resize:vertical; padding:11px 12px;
+    border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink);
+    font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; word-break:break-all;
+  }
+  textarea:focus,select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+  .row{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-top:16px}
+  .row>div{flex:0 0 auto}
+  select,input[type=number]{padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); font-size:14px}
+  button{font:inherit; cursor:pointer; border-radius:8px; border:1px solid transparent}
+  .primary{background:var(--accent); color:var(--accent-ink); border:0; padding:12px 20px; font-weight:650; font-size:15px}
+  .primary:disabled{opacity:.55; cursor:not-allowed}
+  .ghost{background:none; border:1px solid var(--line); color:var(--ink); padding:9px 14px; font-size:14px}
+  .link{background:none; border:0; color:var(--accent); padding:0; font-size:14px; text-decoration:underline}
+  .note{color:var(--muted); font-size:13px; margin:14px 0 0}
+  /* consolidated per-residue table */
+  .rt-wrap{overflow:auto; max-height:460px; border:1px solid var(--line); border-radius:9px}
+  table.rt{border-collapse:collapse; width:100%; font-size:12.5px;
+    font-variant-numeric:tabular-nums}
+  table.rt th,table.rt td{padding:5px 9px; text-align:left; white-space:nowrap;
+    border-bottom:1px solid var(--line)}
+  table.rt.position-table{table-layout:fixed; min-width:1050px}
+  table.rt.position-table th,table.rt.position-table td{white-space:normal; overflow-wrap:anywhere; vertical-align:top}
+  table.rt td.liab,table.rt th.liab{white-space:normal; min-width:150px; line-height:1.35}
+  table.rt thead th{position:sticky; top:0; background:var(--panel); z-index:1;
+    font-size:11px; letter-spacing:.03em; text-transform:uppercase; color:var(--muted)}
+  table.rt tbody tr:hover{background:var(--neutral-bg)}
+  table.rt td.aa{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:650}
+  table.rt td.gl-no{color:var(--mid); font-weight:600}
+  span.v{display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; font-weight:700}
+  .v-preserve{background:var(--neutral-bg); color:var(--ink); border:1px solid var(--line)}
+  .v-evaluate{background:var(--high-bg); color:var(--high)}
+  .v-watch{background:var(--mid-bg); color:var(--mid)}
+  .v-clear{background:var(--low-bg); color:var(--low)}
+  .rt-bar{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:0 0 12px}
+  .rt-filter{background:none; border:1px solid var(--line); color:var(--ink);
+    padding:5px 11px; font-size:12.5px; border-radius:999px; cursor:pointer}
+  .rt-filter[aria-pressed=true]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+  .rt-filter:disabled{opacity:.45; cursor:default}
+  .rt-spacer{flex:1 1 auto}
+  td.rt-sub,.rt-sub{color:var(--muted)}
+  table.rt td.rt-next{white-space:normal; min-width:200px; line-height:1.35;
+    color:var(--muted); font-size:11.5px}
+  .v-down{cursor:help; font-weight:800}
+  .rt-why{font-size:12.5px; color:var(--muted); line-height:1.5; margin:0 0 11px;
+    padding:9px 12px; background:var(--neutral-bg); border-radius:8px}
+  .rt-why b{color:var(--ink)}
+  table.rt th{cursor:help}
+  .th-b{display:inline-block; margin-left:4px; width:13px; height:13px; line-height:13px;
+    text-align:center; border-radius:3px; font-size:8.5px; font-weight:800;
+    text-transform:uppercase; vertical-align:1px}
+  .th-b[data-b=measured]{background:var(--basis-measured-bg); color:var(--basis-measured)}
+  .th-b[data-b=predicted]{background:var(--basis-modelled-bg); color:var(--basis-modelled)}
+  .th-b[data-b=structure]{background:var(--basis-modelled-bg); color:var(--basis-modelled)}
+  .viewer-controls{display:grid; gap:7px; margin-bottom:10px}
+  /* viewer colour key */
+  .lg{display:flex; gap:12px; align-items:flex-start; margin:9px 0 0; padding:10px 12px;
+    border:1px solid var(--line); border-radius:9px; background:var(--neutral-bg)}
+  .lg-ramp{flex:0 0 14px; display:flex; flex-direction:column; width:14px; height:62px;
+    border-radius:4px; overflow:hidden; border:1px solid var(--line)}
+  .lg-ramp span{flex:1 1 0}
+  .lg-title{font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--muted)}
+  .lg-items{display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:5px}
+  .lg-item{display:inline-flex; align-items:center; gap:6px; font-size:12px}
+  .lg-dot{width:10px; height:10px; border-radius:3px; border:1px solid rgba(0,0,0,.12);
+    flex:0 0 auto}
+  .lg-cut{color:var(--muted); font-variant-numeric:tabular-nums}
+  .lg-note{font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.45}
+  .pick{margin-top:9px; padding:9px 12px; border:1px solid var(--line); border-radius:8px;
+    background:var(--panel); font-size:12.5px; min-height:38px; line-height:1.5}
+  .pick b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .pick-na,.pick-flag{color:var(--muted)}
+  .pick-flag{color:var(--mid); font-weight:600}
+  tr.rt-clickable{cursor:pointer}
+  tr.rt-clickable:hover td{background:var(--neutral-bg)}
+  tr.rt-focused td{box-shadow:inset 0 0 0 9999px color-mix(in srgb, var(--accent) 9%, transparent)}
+  .modes-label{font-size:11px; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--muted); align-self:center; margin-right:3px; min-width:46px}
+  /* surface patch findings */
+  .pk{display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .pk-card{border:1px solid var(--line); border-radius:9px; padding:12px 13px}
+  .pk-high{background:var(--high-bg); border-color:var(--high)}
+  .pk-review{background:var(--mid-bg); border-color:var(--mid)}
+  .pk-lower{background:var(--low-bg)}
+  .pk-unknown{background:var(--neutral-bg)}
+  .pk-call{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em}
+  .pk-high .pk-call{color:var(--high)} .pk-review .pk-call{color:var(--mid)}
+  .pk-lower .pk-call{color:var(--low)} .pk-unknown .pk-call{color:var(--muted)}
+  /* molecule-level flags */
+  .mf{display:grid; gap:10px}
+  .mf-row{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:start;
+    padding:11px 13px; border:1px solid var(--line); border-radius:9px}
+  .mf-red{background:var(--high-bg); border-color:var(--high)}
+  .mf-amber{background:var(--mid-bg); border-color:var(--mid)}
+  .mf-green{background:var(--low-bg)}
+  .mf-unknown{background:var(--neutral-bg)}
+  .mf-dot{width:11px; height:11px; border-radius:50%; margin-top:4px}
+  .mf-red .mf-dot{background:var(--high)} .mf-amber .mf-dot{background:var(--mid)}
+  .mf-green .mf-dot{background:var(--low)} .mf-unknown .mf-dot{background:var(--muted)}
+  .mf-val{font-variant-numeric:tabular-nums; font-weight:680; white-space:nowrap; font-size:13px}
+  .mf-out{font-size:11.5px; color:var(--muted); margin-top:4px}
+  .mf-scale{display:flex; flex-wrap:wrap; gap:5px; margin-top:7px}
+  .mf-cut{font-size:10.5px; font-weight:600; letter-spacing:.02em; padding:2px 7px;
+    border-radius:999px; border:1px solid var(--line); color:var(--muted);
+    background:var(--panel); opacity:.72; font-variant-numeric:tabular-nums}
+  .mf-cut.on{opacity:1; font-weight:750; border-width:1.5px}
+  .mf-cut-red.on{color:var(--high); border-color:var(--high)}
+  .mf-cut-amber.on{color:var(--mid); border-color:var(--mid)}
+  .mf-cut-green.on{color:var(--low); border-color:var(--low)}
+  .mf-measure{font-size:11.5px; color:var(--muted); margin-top:5px}
+  .mf-why{margin-top:6px}
+  .mf-why summary{cursor:pointer; font-size:11.5px; color:var(--muted)}
+  .mf-why p{font-size:12px; color:var(--muted); margin:6px 0 0}
+  .mf-tradeoff{border-left:3px solid var(--mid); padding:9px 13px; background:var(--mid-bg);
+    border-radius:0 8px 8px 0; font-size:13px; margin-top:10px}
+  .mf-reconcile{border-left:3px solid var(--low); padding:10px 13px; background:var(--low-bg);
+    border-radius:0 8px 8px 0; font-size:13px; line-height:1.5; margin-top:10px}
+  .mf-reconcile.mf-agree{border-left-color:var(--mid); background:var(--mid-bg)}
+  /* DeepSP sequence-only spatial descriptors */
+  .ds{display:grid; gap:9px}
+  .ds-row{display:grid; grid-template-columns:minmax(0,1fr) 92px 150px; gap:12px; align-items:center;
+    padding:10px 13px; border:1px solid var(--line); border-radius:9px}
+  .ds-row.ds-flag{background:var(--high-bg); border-color:var(--high)}
+  .ds-name{font-size:13px; font-weight:620}
+  .ds-note{font-size:11.5px; color:var(--muted); margin-top:3px}
+  .ds-val{font-variant-numeric:tabular-nums; font-weight:680; font-size:13px; text-align:right}
+  .ds-bar{position:relative; height:8px; border-radius:5px; background:var(--neutral-bg);
+    border:1px solid var(--line); overflow:hidden}
+  .ds-bar span{position:absolute; left:0; top:0; bottom:0; background:var(--low)}
+  .ds-flag .ds-bar span{background:var(--high)}
+  .ds-pct{font-size:11px; color:var(--muted); margin-top:4px; font-variant-numeric:tabular-nums}
+  .ds-mark{position:absolute; top:-2px; bottom:-2px; width:1px; background:var(--mid)}
+  /* "percentile against what" \u2014 asked of every percentile on the page */
+  .refbox{border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:0 9px 9px 0;
+    padding:10px 14px; margin:0 0 14px; background:var(--neutral-bg)}
+  .refbox-h{font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted)}
+  .refbox p{font-size:12.5px; line-height:1.5; margin:5px 0 0; color:var(--ink)}
+  .refbox-not{color:var(--muted) !important}
+  /* verdict tiles -- the brief's "At a glance", on screen */
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .verdict{margin:0 0 26px}
+  .verdict h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);margin:22px 0 10px}
+  .verdict-call{display:flex;gap:14px;align-items:flex-start;margin:0;
+    padding:15px 18px;border-radius:9px;background:var(--neutral-bg);
+    font-size:16px;font-weight:650;line-height:1.45}
+  .verdict-call::before{content:"";flex:0 0 5px;align-self:stretch;border-radius:3px}
+  .verdict-call[data-worst=high]::before{background:var(--high)}
+  .verdict-call[data-worst=review]::before{background:var(--mid)}
+  .verdict-call[data-worst=good]::before{background:var(--low)}
+  .tiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+  .tile{padding:13px 15px 15px;border:1px solid var(--line);border-radius:10px;
+    background:var(--panel);border-bottom-width:3px;border-bottom-style:solid}
+  .tile[data-state=high]{border-bottom-color:var(--high)}
+  .tile[data-state=review]{border-bottom-color:var(--mid)}
+  .tile[data-state=good]{border-bottom-color:var(--low)}
+  /* A grey tile must not read as a pass in greyscale or to a colour-blind
+     reader, so "no data" is the one state carrying a texture as well. */
+  .tile[data-state=unknown]{border-bottom-color:var(--line);
+    background:repeating-linear-gradient(135deg,var(--panel) 0 7px,var(--neutral-bg) 7px 14px)}
+  .tile header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .tile-cat{font-size:12px;font-weight:650;color:var(--muted)}
+  .tile-state{margin:9px 0 3px;font-size:17px;font-weight:750;letter-spacing:.02em}
+  .tile[data-state=high] .tile-state{color:var(--high)}
+  .tile[data-state=review] .tile-state{color:var(--mid)}
+  .tile[data-state=good] .tile-state{color:var(--low)}
+  .tile[data-state=unknown] .tile-state{color:var(--muted)}
+  .tile-detail{margin:0;font-size:11.5px;color:var(--muted);line-height:1.4}
+  .basis{font-weight:700;font-size:9.5px;line-height:1.6;letter-spacing:.05em;text-transform:uppercase;
+    padding:2px 6px;border-radius:999px;border:1px dashed transparent;cursor:help;
+    background:none}
+  .basis[data-b=measured]{background:var(--basis-measured-bg);color:var(--basis-measured);
+    border-color:var(--basis-measured)}
+  .basis[data-b=modelled]{background:var(--basis-modelled-bg);color:var(--basis-modelled);
+    border-color:var(--basis-modelled)}
+  .basis[data-b=sequence]{background:var(--basis-seq-bg);color:var(--basis-seq);
+    border-color:var(--line)}
+  .keynums{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));
+    margin-top:14px}
+  .keynum .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .keynum .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+  .keynum.outside .v{color:var(--mid)}
+  /* germline: silence for a match, achromatic for an expected CDR
+     difference, colour only for framework */
+  td.gl{white-space:nowrap}
+  .gl-pair{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .gl-ref{color:var(--muted)}
+  tr[data-gl=match] .gl-pair,tr[data-gl=match] .gl-obs{color:var(--muted);font-weight:400}
+  tr[data-gl=mismatch_cdr] .gl-obs{color:var(--gl-cdr);font-weight:600;
+    border-bottom:1px dotted var(--gl-cdr-line)}
+  tr[data-gl=mismatch_framework] .gl-obs{color:var(--gl-fr);font-weight:700}
+  tr[data-gl=mismatch_framework] .gl-sign{color:var(--gl-fr);font-weight:700;margin-left:5px}
+  table.rt tbody tr[data-gl=mismatch_framework] td:first-child{
+    box-shadow:inset 3px 0 0 var(--gl-fr)}
+  .rt-filter[data-f=gl-fr][aria-pressed=true]{background:var(--gl-fr);color:var(--panel);
+    border-color:var(--gl-fr)}
+  .rt-filter[data-f=gl-cdr][aria-pressed=true]{background:var(--gl-cdr);color:var(--panel);
+    border-color:var(--gl-cdr)}
+  /* progress */
+  ol.steps{list-style:none; margin:0; padding:0; display:grid; gap:9px}
+  ol.steps li{display:flex; gap:10px; align-items:center; font-size:14px; color:var(--muted)}
+  ol.steps li .dot{width:17px; height:17px; border-radius:50%; border:2px solid var(--line); flex:0 0 auto; display:grid; place-items:center; font-size:10px; font-weight:700}
+  ol.steps li[data-state=run]{color:var(--ink)} ol.steps li[data-state=run] .dot{border-color:var(--accent); animation:pulse 1.1s ease-in-out infinite}
+  ol.steps li[data-state=done]{color:var(--ink)} ol.steps li[data-state=done] .dot{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+  ol.steps li[data-state=skip] .dot{border-style:dashed}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  /* verdict */
+  .verdict-row{display:flex; gap:14px; align-items:flex-start}
+  .badge{flex:0 0 auto; font-size:12px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; padding:5px 10px; border-radius:999px}
+  .b-high{background:var(--high-bg); color:var(--high)} .b-mid{background:var(--mid-bg); color:var(--mid)} .b-low{background:var(--low-bg); color:var(--low)}
+  h2{font-size:19px; margin:30px 0 12px; letter-spacing:-.01em}
+  h2 .count{color:var(--muted); font-weight:500; font-size:15px}
+  /* report sections as panels */
+  .secnav{position:sticky; top:0; z-index:5; display:flex; gap:9px; align-items:center;
+    flex-wrap:wrap; padding:11px 2px; margin:4px 0 14px;
+    background:var(--bg); border-bottom:1px solid var(--line)}
+  .secnav label{margin:0; font-size:11px; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--muted)}
+  .secnav select{min-width:230px; max-width:100%}
+  .secnav .ghost{padding:7px 12px; font-size:13px}
+  details.panel{border:1px solid var(--line); border-radius:12px; background:var(--panel);
+    margin:0 0 12px; overflow:hidden}
+  details.panel>summary{list-style:none; cursor:pointer; display:flex; gap:12px;
+    align-items:baseline; padding:15px 18px; font-size:17px; font-weight:650;
+    letter-spacing:-.01em}
+  details.panel>summary::-webkit-details-marker{display:none}
+  /* The marker is drawn rather than inherited: Safari's default triangle sits
+     on the first line box and misaligns against a two-line summary. */
+  details.panel>summary::before{content:""; flex:0 0 8px; height:8px; margin-top:6px;
+    border-right:2px solid var(--muted); border-bottom:2px solid var(--muted);
+    transform:rotate(-45deg); transition:transform .12s ease}
+  details.panel[open]>summary::before{transform:rotate(45deg)}
+  details.panel>summary:hover{background:var(--neutral-bg)}
+  details.panel>summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+  .p-title{flex:1 1 auto; min-width:0}
+  .p-sum{flex:0 1 auto; min-width:0; font-size:13px; font-weight:500; color:var(--muted);
+    font-variant-numeric:tabular-nums; text-align:right}
+  .p-body{padding:0 18px 18px; border-top:1px solid var(--line)}
+  .p-body>h2:first-child{margin-top:16px}
+  .p-body>.card:first-child{margin-top:16px}
+  .p-body .card{border:0; padding:0; background:none; margin-bottom:14px}
+  .p-body .card+.card{border-top:1px solid var(--line); padding-top:14px}
+  @media print{
+    .secnav{display:none}
+    details.panel>.p-body{display:block !important}
+    details.panel{break-inside:avoid-page; border-color:#bbb}
+    .rt-wrap{max-height:none !important; overflow:visible !important}
+  }
+  /* liability */
+  /* liability fix workbench: list on the left, one detail pane on the right */
+  .wb{display:grid; grid-template-columns:minmax(210px,254px) 1fr; gap:0; padding:0; overflow:hidden}
+  .wb-list{border-right:1px solid var(--line); background:var(--neutral-bg);
+    max-height:560px; overflow:auto}
+  .wb-item{display:block; width:100%; text-align:left; background:none; border:0;
+    border-bottom:1px solid var(--line); border-left:3px solid transparent;
+    padding:11px 13px; cursor:pointer; font:inherit; color:inherit}
+  .wb-item:hover{background:var(--panel)}
+  .wb-item[aria-selected=true]{background:var(--panel); border-left-color:var(--accent)}
+  .wb-item:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+  .wb-row{display:flex; gap:8px; align-items:center; justify-content:space-between}
+  .wb-row .pos{font:600 13px/1 ui-monospace,Menlo,monospace; background:var(--neutral-bg);
+    border:1px solid var(--line); padding:3px 6px; border-radius:6px}
+  .wb-item[aria-selected=true] .wb-row .pos{background:var(--bg)}
+  .wb-row .badge{font-size:9.5px; padding:3px 7px}
+  .wb-what{display:block; font-size:12.5px; font-weight:600; margin-top:6px; line-height:1.3}
+  .wb-sig{display:flex; flex-wrap:wrap; gap:3px 9px; margin-top:5px;
+    font-size:11px; color:var(--muted)}
+  .wb-contact{color:var(--mid); font-weight:600}
+  .wb-prec{color:var(--low); font-weight:600}
+  .wb-detail{padding:16px 18px; min-width:0; overflow-x:auto}
+  .wb-head{display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px}
+  .wb-head .pos{font:600 15px/1 ui-monospace,Menlo,monospace; background:var(--neutral-bg);
+    border:1px solid var(--line); padding:5px 8px; border-radius:6px}
+  .wb-head .what{font-weight:650; font-size:15px}
+  .wb-head .where{color:var(--muted); font-size:13px; flex-basis:100%}
+  .wb-note{font-size:13px; margin:6px 0 0; color:var(--muted)}
+  .wb-note.wb-ok{color:var(--low)} .wb-note.wb-warn{color:var(--mid)}
+  @media (max-width:760px){
+    .wb{grid-template-columns:1fr}
+    .wb-list{border-right:0; border-bottom:1px solid var(--line); max-height:220px}
+  }
+  /* Printing has to carry every site, not whichever one happened to be open. */
+  @media print{
+    .wb{display:block}
+    .wb-list{display:none}
+    .wb-pane[hidden]{display:block !important}
+    .wb-pane{break-inside:avoid-page; padding-top:10px; border-top:1px solid #ccc}
+  }
+  .liab{border:1px solid var(--line); border-radius:11px; margin:0 0 14px; overflow:hidden}
+  .liab-head{padding:14px 16px; background:var(--neutral-bg); display:flex; gap:10px; align-items:baseline; flex-wrap:wrap}
+  .liab-head .pos{font:600 14px/1 ui-monospace,Menlo,monospace; background:var(--panel); border:1px solid var(--line); padding:4px 7px; border-radius:6px}
+  .liab-head .what{font-weight:600}
+  .liab-head .where{color:var(--muted); font-size:14px}
+  .liab-body{padding:4px 16px 14px}
+  table.fixes{width:100%; border-collapse:collapse; font-size:14px}
+  table.fixes th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600; padding:10px 8px 6px; border-bottom:1px solid var(--line)}
+  table.fixes td{padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:top}
+  table.fixes tr:last-child td{border-bottom:0}
+  .mut{font:650 14px/1 ui-monospace,Menlo,monospace}
+  .pill{display:inline-block; font-size:11px; padding:2px 7px; border-radius:999px; background:var(--neutral-bg); color:var(--muted); margin:0 0 0 6px; white-space:nowrap}
+  .pill.warn{background:var(--mid-bg); color:var(--mid)} .pill.good{background:var(--low-bg); color:var(--low)} .pill.bad{background:var(--high-bg); color:var(--high)}
+  .bar{height:5px; border-radius:3px; background:var(--line); width:74px; overflow:hidden; margin-top:5px}
+  .bar i{display:block; height:100%; background:var(--accent)}
+  ul.flags{margin:7px 0 0; padding:0; list-style:none; display:grid; gap:3px}
+  ul.flags li{font-size:12.5px; color:var(--muted)}
+  ul.flags li b{font-weight:600}
+  ul.flags li.attention b{color:var(--mid)} ul.flags li.good b{color:var(--low)}
+  /* metrics */
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+  .cell{background:var(--panel); padding:13px 14px}
+  .cell .k{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600}
+  .cell .v{font-size:19px; font-weight:650; margin-top:3px; font-variant-numeric:tabular-nums}
+  .cell .h{font-size:12px; color:var(--muted); margin-top:1px}
+  details.limits{margin-top:26px; border-top:1px solid var(--line); padding-top:16px}
+  details.limits summary{cursor:pointer; font-weight:600; font-size:14px}
+  details.limits p{color:var(--muted); font-size:13.5px}
+  /* Band colours: green = inside the observed panel range, amber = outside it,
+     red is reserved for calls the screen already rated high priority. */
+  .verdict-line{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:9px; margin:0 0 12px; font-size:14px; line-height:1.5}
+  .v-within{background:var(--low-bg); color:var(--ink); border-left:4px solid var(--low)}
+  .v-outside{background:var(--mid-bg); color:var(--ink); border-left:4px solid var(--mid)}
+  .v-high{background:var(--high-bg); color:var(--ink); border-left:4px solid var(--high)}
+  .v-unknown{background:var(--neutral-bg); color:var(--muted); border-left:4px solid var(--line)}
+  .verdict-line b{display:block; margin-bottom:2px}
+  .cell.b-within{box-shadow:inset 3px 0 0 var(--low)}
+  .cell.b-above, .cell.b-below{box-shadow:inset 3px 0 0 var(--mid)}
+  /* Inside the range but in the outer tenth: not an outlier, not unremarkable. */
+  .cell.b-within.b-tail{box-shadow:inset 3px 0 0 var(--mid)}
+  .cell.b-within.b-tail .band{color:var(--mid)}
+  .cell.b-unknown{box-shadow:inset 3px 0 0 var(--line)}
+  .cell .band{font-size:10.5px; margin-top:3px; font-weight:600}
+  .cell.b-within .band{color:var(--low)}
+  .cell.b-above .band, .cell.b-below .band{color:var(--mid)}
+  .cell.b-unknown .band{color:var(--muted)}
+  details.tool{border:1px solid var(--line); border-radius:11px; margin:0 0 12px; background:var(--panel); overflow:hidden}
+  details.tool>summary{cursor:pointer; padding:14px 16px; font-weight:650; font-size:15px; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:12px}
+  details.tool>summary::-webkit-details-marker{display:none}
+  details.tool>summary::after{content:'+'; color:var(--muted); font-weight:400; font-size:19px; line-height:1}
+  details.tool[open]>summary::after{content:'\2212'}
+  details.tool>summary small{font-weight:400; color:var(--muted); font-size:12.5px}
+  details.tool .tool-body{padding:0 16px 16px}
+  #viewer{width:100%; height:430px; border-radius:9px; background:#f4f6f6; position:relative}
+  :root[data-theme="dark"] #viewer, :root:not([data-theme="light"]) #viewer{background:#15171a}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #viewer{background:#15171a}}
+  .modes{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 10px}
+  .modes button{background:var(--neutral-bg); border:1px solid var(--line); color:var(--ink); padding:6px 11px; font-size:13px; border-radius:7px}
+  .modes button[aria-pressed=true]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+  table.full{width:100%; border-collapse:collapse; font-size:13px}
+  table.full th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:8px 7px; border-bottom:1px solid var(--line)}
+  table.full td{padding:7px; border-bottom:1px solid var(--line); vertical-align:top}
+  .vrow{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:0 0 10px}
+  .vrow label{margin:0; font-weight:400; font-size:13px; display:flex; gap:6px; align-items:center}
+  #variant-input{width:100%; min-height:72px; font:13px/1.5 ui-monospace,Menlo,monospace}
+  .addfix{background:none; border:1px solid var(--line); color:var(--accent); font-size:11px; padding:2px 7px; border-radius:6px; margin-left:6px; cursor:pointer}
+  .delta-up{color:var(--mid); font-weight:600} .delta-down{color:var(--low); font-weight:600} .delta-flat{color:var(--muted)}
+  .dl{display:flex; gap:8px; flex-wrap:wrap}
+  .dl a{display:inline-block; padding:9px 13px; border:1px solid var(--line); border-radius:8px; font-size:13.5px; text-decoration:none; color:var(--ink)}
+  .cite{font-size:11.5px; color:var(--muted); margin:8px 0 0; line-height:1.45}
+  .cite a{color:var(--accent)}
+  .cite b{font-weight:600; color:var(--ink)}
+  .err{background:var(--high-bg); color:var(--high); border:1px solid var(--high); border-radius:9px; padding:13px 15px; font-size:14px}
+  .hidden{display:none !important}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+  }
+  @media (max-width:560px){
+    .verdict-row{flex-direction:column;gap:10px}.verdict-row>.badge{align-self:flex-start}
+    .ds-row{grid-template-columns:minmax(0,1fr) auto}.ds-row>div:last-child{grid-column:1/-1}
+    .mf-row{grid-template-columns:auto minmax(0,1fr)}.mf-val{grid-column:2;white-space:normal}
+    .secnav select{max-width:100%}.p-sum{font-size:12px;max-width:52%}
+    .card{padding:16px}.pk{grid-template-columns:minmax(0,1fr)}
+  }
+  @media (max-width:560px){ .wrap{padding:26px 16px 72px} table.fixes th:nth-child(3),table.fixes td:nth-child(3){display:none} }
+  .assay-plan h3{margin:20px 0 10px;font-size:16px}
+  .assay-baseline{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .assay-baseline-item{padding:14px;border:1px solid var(--line);border-radius:8px;border-top:3px solid var(--accent,var(--line))}
+  .assay-plan p{margin:7px 0;line-height:1.5}
+  .assay-finding{white-space:normal!important;min-width:150px}
+  .assay-evidence{white-space:normal!important;min-width:190px}
+  .assay-recommendation{white-space:normal!important;min-width:280px}
+  .assay-guidance+.assay-guidance{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}
+  @media(max-width:600px){.assay-baseline{grid-template-columns:1fr}}
+</style>
+<link rel="stylesheet" href="/static/workspace.css">
+<link rel="stylesheet" href="/static/engineering.css">
+<script src="/static/workspace.js"></script>
+<script src="/static/engineering.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <strong style="letter-spacing:-.01em">Antibody Atlas</strong>
+    <span style="font-size:13px;color:var(--muted)" id="engines">checking local engines…</span>
+  </header>
+
+  <h1>Screen an antibody for developability liabilities</h1>
+  <p class="sub">Paste a variable domain. Review potential chemical liabilities, charge and hydrophobicity, then explore candidate substitutions with their predicted tradeoffs. Everything runs on this computer.</p>
+
+  <section class="card" id="input-card">
+    <label for="heavy">Heavy chain <small>VH or VHH — required</small></label>
+    <textarea id="heavy" spellcheck="false" placeholder="Paste a heavy-chain variable domain &mdash; protein or DNA, one FASTA record"></textarea>
+    <label for="light">Light chain <small>VL — optional, but improves structure and paratope prediction</small></label>
+    <textarea id="light" spellcheck="false" placeholder="Paste a kappa or lambda variable domain &mdash; protein or DNA"></textarea>
+    <div class="row">
+      <div><label for="scheme" style="margin-top:0">CDR definition</label><select id="scheme"><option value="imgt">IMGT</option><option value="kabat">Kabat</option></select></div>
+      <div><label for="ph" style="margin-top:0">Charge pH</label><input id="ph" type="number" min="0" max="14" step="0.1" value="7.4" style="width:90px"></div>
+      <div><label for="isotype" style="margin-top:0">Charge basis <small>Fv or assembled full IgG</small></label><select id="isotype">
+        <option value="" selected>Fv only</option>
+        <option value="IGHG1">Full IgG1</option>
+        <option value="IGHG2">Full IgG2</option>
+        <option value="IGHG3">Full IgG3</option>
+        <option value="IGHG4">Full IgG4</option>
+      </select></div>
+      <div><label for="structure-file" style="margin-top:0">Your own structure <small>crystal or cryo-EM, optional</small></label>
+        <input id="structure-file" type="file" accept=".pdb,.ent,.cif,.mmcif" style="font-size:13px;max-width:230px"></div>
+      <div><label for="models" style="margin-top:0">Structure models <small>exposure confidence</small></label><select id="models">
+        <option value="1" selected>1 — fastest</option>
+        <option value="3">3 — flag if any</option>
+      </select></div>
+      <div style="flex:1"></div>
+      <div><button class="ghost" id="example" type="button">Load example</button></div>
+      <div><button class="primary" id="run" type="button">Screen antibody</button></div>
+    </div>
+    <p class="note">Sequences stay on this machine. Nothing is uploaded. Structure prediction adds about a minute and unlocks the exposure and paratope columns.
+      Three models takes about three times as long and reports the worst-case exposure across them, plus where they disagree — worth it when a site is about to decide an experiment.
+      <strong>Supplying your own structure replaces the prediction entirely</strong>, and geometric results are calculated from the supplied coordinates rather than a newly predicted backbone. If the file contains the antigen, antibody–antigen distances can be calculated directly from that complex.</p>
+  </section>
+
+  <details class="tool" id="batch-panel">
+    <summary>Screen a panel<small>several molecules at once, ranked side by side</small></summary>
+    <div class="tool-body">
+      <p class="note" style="margin:0 0 10px">Paste a multi-FASTA panel. Pair the chains by name:
+        <code>&gt;MAB01|H</code> and <code>&gt;MAB01|L</code>. Protein or DNA both work.
+        This runs the sequence-only tier in the background, one molecule at a time.
+        For large panels or for structure, use the command-line runner:
+        <code>python run_batch.py panel.fasta --out results/</code>.</p>
+      <label for="batch-input">Panel sequences</label>
+      <textarea id="batch-input" spellcheck="false" style="min-height:150px"
+        placeholder="&gt;MAB01|H&#10;EVQLVESGGG…&#10;&gt;MAB01|L&#10;DIQMTQSPSS…&#10;&gt;MAB02|H&#10;…"></textarea>
+      <div class="row" style="align-items:flex-end;gap:12px;margin-top:10px">
+        <div><label for="batch-isotype" style="margin-top:0">Charge basis</label>
+          <select id="batch-isotype">
+            <option value="" selected>Fv only</option>
+            <option value="IGHG1">Full IgG1</option><option value="IGHG2">Full IgG2</option>
+            <option value="IGHG3">Full IgG3</option><option value="IGHG4">Full IgG4</option>
+          </select></div>
+        <div><label style="margin-top:0;font-weight:400;font-size:13.5px">
+          <input type="checkbox" id="batch-precedents" checked> Clinical comparators
+          <small style="display:block;color:var(--muted)">slower; most of the per-molecule cost</small>
+        </label></div>
+        <div style="flex:1"></div>
+        <div><button class="ghost" id="batch-example" type="button">Load example panel</button></div>
+        <div><button class="primary" id="batch-run" type="button"
+               style="padding:9px 16px;font-size:14px">Screen panel</button></div>
+      </div>
+      <div id="batch-status" class="note" role="status" aria-live="polite"></div>
+      <p class="note" id="batch-hint" style="display:none">Click a molecule name to open it in
+        the full screen, or tick rows and download their reports.</p>
+      <div id="batch-results"></div>
+    </div>
+  </details>
+
+  <section class="card hidden" id="progress-card">
+    <ol class="steps" id="steps" aria-label="Analysis progress" aria-live="polite"></ol>
+  </section>
+
+  <div id="error-slot" role="alert" tabindex="-1"></div>
+  <div id="analysis-status" class="sr-only" role="status"></div>
+  <div id="results" class="hidden" tabindex="-1" aria-label="Analysis results"></div>
+
+  <details class="limits">
+    <summary>What this does and does not tell you</summary>
+    <p>Every priority here is a screening heuristic for ordering experiments, not a prediction of behaviour. A sequence motif is a pattern, not an observed modification: confirm deamidation and isomerization by peptide mapping and oxidation by forced degradation before engineering anything away. Substitutions are ranked for conservativeness, positional precedent and surface consequence — none of that predicts retained binding, potency, expression or thermostability, and every candidate needs binding and activity testing. Paratope prediction does not know this antibody's antigen; a position predicted not to contact can still matter to affinity.</p>
+    <p id="tier-note"></p>
+  </details>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const EXAMPLE = {
+  heavy:'QVQLVQSGAEVKKPGASVKVSCKASGYTFTSYGISWVRQAPGQGLEWMGWISAYNGNTNYAQKLQGRVTMTTDTSTSTAYMELRSLRSDDTAVYYCARDYYGSGSFDYWGQGTLVTVSS',
+  light:'DIQMTQSPSSLSASVGDRVTITCRASQSISSYLNWYQQKPGKAPKLLIYAASSLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYYCQQSYSTPLTFGGGTKVEIK'
+};
+const STEPS = [
+  ['number','Numbering the variable domains'],
+  ['screen','Finding chemical liabilities'],
+  ['fold','Predicting the Fv structure'],
+  ['paratope','Predicting the antigen contact surface'],
+  ['fixes','Ranking substitutions and predicted tradeoffs']
+];
+let caps = null;
+
+function drawSteps(state){
+  $('#steps').innerHTML = STEPS.map(([k,label])=>{
+    const s = state[k] || 'wait';
+    const mark = s==='done' ? '✓' : s==='skip' ? '–' : '';
+    const text = s==='skip' ? label+' — skipped' : label;
+    return `<li data-state="${s}"><span class="dot">${mark}</span><span>${esc(text)}</span></li>`;
+  }).join('');
+}
+function fail(message){
+  $('#error-slot').innerHTML = `<div class="err">${esc(message)}</div>`;
+  $('#progress-card').classList.add('hidden');
+  $('#error-slot').focus();
+  $('#run').disabled = false; $('#run').textContent = 'Screen antibody';
+}
+async function api(path, body, method){
+  const init = method ? {method} :
+    body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {};
+  const res = await fetch(path, init);
+  const text = await res.text();
+  let data = null; try{ data = JSON.parse(text); }catch(e){}
+  if(!res.ok) throw new Error((data && (data.detail||data.message)) || `${path} failed (${res.status})`);
+  return data;
+}
+
+(async function boot(){
+  try{
+    const h = await api('/api/health');
+    caps = await api('/api/substitutions/capabilities');
+    const bits = [];
+    bits.push(h.structure_model ? 'structure ready' : 'structure unavailable');
+    bits.push(caps.paratope && caps.paratope.available ? 'paratope ready' : 'paratope unavailable');
+    bits.push(caps.stability_energy?.available ? 'stability ready' : 'stability unavailable');
+    if(!caps.clinical_precedent_available) bits.push('precedent data not built');
+    $('#engines').textContent = bits.join(' · ');
+    $('#engines').title = caps.stability_energy?.available
+      ? 'Stability predictions: ' + (caps.stability_energy.method || 'dedicated engine available')
+      : 'Stability predictions unavailable: ' + (caps.stability_energy?.reason || 'restart the server after updating to check this capability');
+    if(caps.missing_reference_data && caps.missing_reference_data.length){
+      $('#tier-note').textContent = 'Positional precedent is unavailable because the reference data has not been built on this machine. Run: ' + caps.setup_hint;
+    }
+
+    // Is the server older than this page?
+    //
+    // Static files are re-read on every request; Python modules are loaded
+    // once at startup. Update the code without restarting and the browser
+    // gets this page talking to the previous server, so a control here posts
+    // to a route that process has never heard of and the user sees an opaque
+    // failure in the middle of an analysis. Checking is cheap and the fix is
+    // one restart, so say so plainly rather than letting them find out.
+    const needs = {
+      '/api/structure': 'supplying your own crystal or cryo-EM structure',
+      '/api/repack':    'modelling what a substitution does to hydrogen bonding',
+    };
+    const absent = Object.entries(needs)
+      .filter(([route]) => !(caps.endpoints||[]).includes(route))
+      .map(([, what]) => what);
+    const features=caps.features||h.features||{};
+    if(!features.top_five_models)absent.push('automatic top-five models and updated stability evidence');
+    // An older server predates the endpoints list entirely, which is itself
+    // the signal -- treat a missing list as stale rather than as modern.
+    const stale = !caps.endpoints || absent.length;
+    if(stale){
+      const what = absent.length ? absent.join(', ') : 'several features on this page';
+      $('#error-slot').innerHTML = `<div class="mf-tradeoff" style="border-left-color:var(--high);background:var(--high-bg)">
+        <strong>This page is newer than the server running behind it.</strong>
+        The code was updated but the app was not restarted, so ${esc(what)}
+        ${absent.length===1?'is':'are'} not available and would fail if used.
+        Quit the Antibody Atlas terminal window and start it again.
+        If it then refuses to start, run
+        <code>.venv/bin/pip install -r requirements.txt</code> first \u2014 an update
+        can add a dependency, and a missing one stops the server booting at all.</div>`;
+    }
+  }catch(e){ $('#engines').textContent = 'local server not reachable'; }
+})();
+
+$('#example').onclick = () => { $('#heavy').value = EXAMPLE.heavy; $('#light').value = EXAMPLE.light; $('#structure-file').value = ''; };
+
+function inputPH(){
+  const input = $('#ph');
+  const value = Number(input.value);
+  if(input.value.trim() === '' || !Number.isFinite(value) || value < 0 || value > 14){
+    input.focus();
+    throw new Error('Enter a charge pH from 0 to 14.');
+  }
+  return value;
+}
+
+wireBatch();
+
+$('#run').onclick = async () => {
+  const heavy = $('#heavy').value.trim(), light = $('#light').value.trim();
+  if(!heavy && !light){ fail('Paste at least one variable-domain sequence.'); return; }
+  let ph; try{ ph = inputPH(); }catch(e){ fail(e.message); return; }
+  const scheme = $('#scheme').value;
+  const picked = $('#structure-file') && $('#structure-file').files[0];
+  // Attaching a constant region moves pI and net charge onto a full-length
+  // basis, which is what the published charge-and-clearance analyses used.
+  const isotype = $('#isotype') ? $('#isotype').value : '';
+  const payload = {heavy, light, scheme, ph};
+  if(isotype) payload.heavy_isotype = isotype;
+  const models = $('#models') ? Number($('#models').value) || 1 : 1;
+
+  $('#error-slot').innerHTML = ''; $('#results').classList.add('hidden');
+  $('#progress-card').classList.remove('hidden');
+  $('#run').disabled = true; $('#run').textContent = 'Screening…';
+  $('#analysis-status').textContent = 'Analysis started.';
+  const state = {}; drawSteps(state);
+
+  try{
+    state.number='run'; state.screen='run'; drawSteps(state);
+    const analysis = await api('/api/analyze', payload);
+    state.number='done'; state.screen='done'; drawSteps(state);
+
+    let foldId = null, foldError = null, structureAnalysis = null;
+    let ingestion = null, epitope = null, structureSource = 'predicted';
+    if(picked){
+      // An experimental structure replaces the prediction rather than
+      // supplementing it. The upload returns a job in the same shape a fold
+      // produces, so everything downstream is unchanged except that it is
+      // now labelled measured.
+      state.fold='run'; drawSteps(state);
+      try{
+        const form = new FormData();
+        form.append('file', picked);
+        form.append('heavy', heavy); form.append('light', light);
+        form.append('ph', ph); form.append('scheme', scheme);
+        form.append('analysis_id', analysis.analysis_id);
+        const res = await fetch('/api/structure', {method:'POST', body:form});
+        const job = await res.json();
+        if(!res.ok) throw new Error((job && job.detail) || 'structure could not be used');
+        foldId = job.id;
+        structureAnalysis = job.structure_analysis || null;
+        ingestion = job.ingestion || null;
+        epitope = job.epitope || null;
+        structureSource = 'experimental';
+        state.fold='done';
+      }catch(e){ foldError = 'Uploaded structure: ' + (e.message||String(e)); state.fold='skip'; }
+    } else if(heavy){
+      state.fold='run'; drawSteps(state);
+      try{
+        const job = await api('/api/fold', {...payload, analysis_id: analysis.analysis_id, models});
+        for(let i=0;i<150*models;i++){
+          await new Promise(r=>setTimeout(r,2000));
+          const s = await api(`/api/fold/${job.id}`);
+          if(s.status==='complete'){ foldId = job.id; structureAnalysis = s.structure_analysis||null; break; }
+          if(s.status==='failed') throw new Error(s.error||'structure prediction failed');
+        }
+        if(!foldId && !foldError) foldError = 'Structure prediction did not finish in time.';
+        state.fold = foldId ? 'done' : 'skip';
+      }catch(e){ foldError = e.message || String(e); state.fold='skip'; }
+    } else { foldError = 'No heavy chain was given, so no structure was predicted.'; state.fold='skip'; }
+    state.paratope = (foldId && caps && caps.paratope && caps.paratope.available) ? 'run' : 'skip';
+    state.fixes='run'; drawSteps(state);
+
+    const fixes = await api('/api/substitutions', {...payload, fold_job_id: foldId, max_per_site: 4});
+    if(state.paratope==='run') state.paratope = (fixes.paratope_detail && fixes.paratope_detail.status==='available') ? 'done' : 'skip';
+    state.fixes='done'; drawSteps(state);
+
+    // Surface patches come from the assessment, which needs the fold job; the
+    // analyze response cannot carry them because the structure does not exist yet.
+    let patchRisk = null, categories = null;
+    try{
+      const assessed = await api('/api/assessment',
+        {analysis_id: analysis.analysis_id, fold_job_id: foldId});
+      patchRisk = assessed && assessed.patch_risk;
+      // The verdict tiles come from the server's own signals(), the same
+      // function that draws them on the one-page brief. Banding them here
+      // would let the screen and the PDF drift apart.
+      categories = assessed && assessed.categories;
+    }catch(e){ foldError = [foldError, 'Summary assessment unavailable: ' + (e.message || String(e))].filter(Boolean).join(' '); }
+
+    render(analysis, fixes, foldError, foldId, structureAnalysis, patchRisk, ingestion, epitope, structureSource, categories);
+    $('#progress-card').classList.add('hidden');
+    $('#run').disabled=false; $('#run').textContent='Screen antibody';
+  }catch(e){ fail(e.message || String(e)); }
+};
+
+function severityOf(site){
+  const band = (site.exposure && site.exposure.exposure_band) || '';
+  if(site.in_cdr && /expos/i.test(band)) return ['b-high','high'];
+  if(site.in_cdr) return ['b-mid','medium'];
+  return ['b-low','lower'];
+}
+
+function citeBlock(fixes, key){
+  const c = (fixes.citations||{})[key];
+  if(!c) return '';
+  const link = c.primary_url
+    ? ` <a href="${esc(c.primary_url)}" target="_blank" rel="noopener">${esc(c.primary_title||'source')}</a>`
+    : '';
+  return `<p class="cite"><b>How this was determined —</b> ${esc(c.basis)}. `
+       + `${esc(c.methods.join(', '))}.${link}`
+       + (c.local_rule ? ` ${esc(c.local_rule)}` : '') + '</p>';
+}
+
+// The full motif names are accurate but too long for a table column, so the
+// table shows a compact form and keeps the full name in the cell's title.
+const LIABILITY_SHORT = {
+  'Asparagine deamidation motif': 'Deamidation',
+  'Aspartate isomerization motif': 'Isomerization',
+  'Oxidation-susceptible residue': 'Oxidation',
+  'N-linked glycosylation sequon': 'Glyc. sequon',
+  'N-terminal pyroglutamate formation': 'Pyro-Glu',
+  'Asp-Pro cleavage motif': 'Asp-Pro cleavage',
+  'Noncanonical cysteine': 'Noncanonical Cys',
+};
+
+// What each column of the per-residue tables actually holds. A bare header
+// ("Contact", "Call") is only legible to whoever wrote the join, so each one
+// carries its unit, its range and where the number came from. The second and
+// third elements are the basis badge and its letter.
+const RT_COLS = {
+  'Chain':      ['Heavy or light, as assigned by ANARCII.'],
+  'Pos':        ['Position in the sequence you pasted, counting from 1.'],
+  'AA':         ['The residue observed at this position.'],
+  'IMGT':       ['Canonical IMGT position. Insertion codes (112A) are part of the position, not a suffix.'],
+  'Region':     ['IMGT region: FR1–FR4 or CDR1–3. An arrow means the second numbering scheme disagrees.'],
+  'Germline aa':['Residue in the assigned human V allele → the residue actually present. Blank where the allele matches, or beyond IMGT 104 where a V-gene library cannot reach.'],
+  'Exposure':   ['Relative side-chain solvent-accessible surface area, 0 buried to ~1 fully exposed. From the structure, so empty on a sequence-only run.', 'structure', 'S'],
+  'Contact':    ['Paragraph’s predicted probability that this position touches antigen, 0 to 1. Prediction, not measurement.', 'predicted', 'P'],
+  'Predicted contact': ['Whether this position is also a predicted antigen contact. A substitution here edits the binding surface. Prediction, not measurement.', 'predicted', 'P'],
+  'To epitope': ['Shortest heavy-atom distance in Å to the antigen in the structure you supplied. ● marks ≤4Å.', 'measured', 'M'],
+  'Call':       ['What the CHEMISTRY at this position calls for: evaluate, watch or clear. Whether the position is also a predicted antigen contact is its own column, not part of this one. Hover a call for its definition.'],
+  'Liability':  ['The chemical liability motif found here.'],
+  'Germline':   ['Whether every residue of the motif is present in the assigned human V allele. A germline-encoded framework motif is carried by every antibody built on that allele, so germline is not available as a back-mutation.'],
+  'Precedent':  ['Approved and Phase‑III drugs in the reference panel carrying this exact motif at this position. Retention in a marketed product is evidence of tolerance, not proof of it.'],
+  'Next step':  ['What the chemistry and the binding involvement together call for. A position can be both a real degradation concern and one you must not casually substitute.']
+};
+
+// ---- shared cell renderers ----------------------------------------------
+// One row builder, three tables. The alternative -- a bespoke builder per
+// table -- is how the germline join and the epitope join drift apart.
+
+function rtEpitopeIndex(epitope){
+  const epi = {};
+  if(epitope && epitope.status === 'measured')
+    for(const r of (epitope.residues||[])) epi[r.position] = r;
+  return epi;
+}
+
+function rtGermlineCell(r, glState){
+  // Three states, three amounts of ink. A match gets none: most rows match,
+  // and marking them drowns the few that matter. A CDR mismatch is expected
+  // in a matured antibody, so it is legible but achromatic. Only a framework
+  // deviation gets colour.
+  if(!r.germline_aa) return '—';
+  if(glState === 'match') return `<span class="gl-pair gl-ref">${esc(r.germline_aa)}</span>`;
+  return `<span class="gl-pair"><span class="gl-ref">${esc(r.germline_aa)}</span>→<span class="gl-obs">${esc(r.aa)}</span></span>`
+    + (glState === 'mismatch_framework'
+       ? ' <span class="gl-sign" aria-hidden="true">≠</span><span class="sr-only">framework mismatch</span>'
+       : '<span class="sr-only">CDR mismatch, expected</span>');
+}
+
+function rtCell(col, r, ctx){
+  const glState = r.germline_status || (r.germline_aa ? 'match' : 'none');
+  // The second numbering scheme's column is headed by the scheme's own name
+  // (KABAT, CHOTHIA...), so it cannot be a fixed key in RT_COLS.
+  if(ctx.alt && col === ctx.alt) return `<td>${esc(r.alt_number||'—')}</td>`;
+  switch(col){
+    case 'Chain': return `<td>${esc(r.chain)}</td>`;
+    case 'Pos':   return `<td>${esc(r.sequence_position)}</td>`;
+    case 'AA':    return `<td class="aa">${esc(r.aa)}</td>`;
+    case 'IMGT':  return `<td>${esc(r.imgt)}</td>`;
+    case 'Region': {
+      // Where the two definitions disagree about this position, both are
+      // shown -- that disagreement is a reason to have the table at all, so
+      // it is made louder rather than reconciled away.
+      const disagrees = !!(ctx.alt && r.alt_region && r.alt_region !== r.imgt_region);
+      return `<td${disagrees?' class="gl-no"':''}${disagrees
+        ? ` title="IMGT calls this ${esc(r.imgt_region)}; ${esc(ctx.alt)} calls it ${esc(r.alt_region)}"`:''}>${
+        disagrees ? `${esc(r.imgt_region)} → ${esc(r.alt_region)}` : esc(r.imgt_region)}</td>`;
+    }
+    case 'Germline aa': return `<td class="gl" title="${esc(r.germline_note||'')}">${rtGermlineCell(r, glState)}</td>`;
+    case 'Germline': {
+      // Whether the MOTIF is germline-encoded, which is the question that
+      // decides whether a framework liability is worth engineering at all.
+      // Unknown is its own answer, not a no.
+      if(r.germline_encoded == null)
+        return `<td class="rt-sub" title="The allele could not be resolved across the whole motif — CDR3, an unassigned allele, or a position the allele does not carry.">unknown</td>`;
+      return r.germline_encoded
+        ? `<td class="gl-ok" title="Every residue of the motif is present in the assigned human V allele, so it is carried by every antibody built on that allele and germline is not available as a back-mutation.">germline</td>`
+        : `<td class="rt-sub" title="At least one residue of the motif differs from the assigned human V allele, so this motif was introduced rather than inherited.">introduced</td>`;
+    }
+    case 'Precedent': {
+      const pr = r.precedent;
+      if(!pr) return `<td class="rt-sub" title="Outside the numbered region the comparator library covers.">not searched</td>`;
+      const n = (pr.approved||0) + (pr.phase_iii||0);
+      if(!n) return `<td class="rt-sub" title="No approved or Phase-III drug in the reference panel carries this motif at this position.">none</td>`;
+      const who = (pr.drugs||[]).slice(0,4).join(', ');
+      return `<td class="gl-ok" title="${esc(who)}${(pr.drugs||[]).length>4?', …':''}. Retention in clinical-stage products is evidence of tolerance, not proof.">${
+        pr.approved?`${esc(pr.approved)} appr`:''}${pr.approved&&pr.phase_iii?' + ':''}${
+        pr.phase_iii?`${esc(pr.phase_iii)} PhIII`:''}</td>`;
+    }
+    case 'Exposure': return `<td>${r.exposure==null?'—':esc(r.exposure)}</td>`;
+    case 'Contact':  return `<td>${r.paratope_score==null?'—':esc(r.paratope_score)}</td>`;
+    case 'Predicted contact': return r.paratope_contact
+      ? `<td class="gl-no" title="Predicted antigen contact. A substitution here edits the binding surface.">yes${
+          r.paratope_score!=null?` <span class="rt-sub">${esc(r.paratope_score)}</span>`:''}</td>`
+      : `<td class="rt-sub">no</td>`;
+    case 'To epitope': {
+      // The epitope module labels positions H112A; these tables store the
+      // bare number plus a chain column. Matching them is the whole join,
+      // and getting it wrong renders the column as dashes rather than
+      // failing, so it is built from both halves explicitly.
+      const e = ctx.epi[String(r.chain) + String(r.imgt).replace(/^[HKL]/, '')];
+      if(!e) return '<td>—</td>';
+      if(e.beyond_cutoff) return '<td class="rt-sub">&gt;15</td>';
+      return `<td${e.contact?' class="gl-no"':''} style="font-variant-numeric:tabular-nums">${
+        esc(e.distance_a)}${e.contact?' ●':''}</td>`;
+    }
+    case 'Call': {
+      const softened = (r.verdict_basis||[]).includes('germline')
+                    || (r.verdict_basis||[]).includes('precedent');
+      return `<td><span class="v v-${esc(r.verdict)}" title="${
+        esc(r.verdict_reason || (ctx.legend||{})[r.verdict] || '')}">${esc(r.verdict)}${
+        softened?' <span class="v-down" title="Demoted from evaluate. This position carries a real liability, but it is in framework and either germline-encoded or carried by an approved or Phase-III drug at the same position.">↓</span>':''}</span></td>`;
+    }
+    case 'Next step': return `<td class="rt-next">${esc(r.next_step||'—')}</td>`;
+    case 'Liability': {
+      const lb = (r.liabilities||[]).map(l=>
+        `${esc(LIABILITY_SHORT[l.kind] || l.kind)}${l.motif?' '+esc(l.motif):''}`).join('; ');
+      const full = (r.liabilities||[]).map(l=>l.kind).join('; ');
+      return `<td class="liab" title="${esc(full)}">${lb||'—'}</td>`;
+    }
+    default: return '<td>—</td>';
+  }
+}
+
+function rtTable(rows, cols, ctx){
+  if(!rows.length) return '';
+  const liabIdx = cols.indexOf('Liability');
+  const head = cols.map((h,i)=>{
+    const d = RT_COLS[h] || (ctx.alt && h === ctx.alt
+      ? [`The same position in ${ctx.alt} numbering, for cross-referencing published work.`]
+      : null);
+    return `<th${i===liabIdx?' class="liab"':''}${d?` title="${esc(d[0])}"`:''}>${esc(h)}${
+      d&&d[1]?`<span class="th-b" data-b="${esc(d[1])}" title="${esc(d[1])}">${esc(d[2])}</span>`:''}</th>`;
+  }).join('');
+  const body = rows.map(r=>{
+    const glState = r.germline_status || (r.germline_aa ? 'match' : 'none');
+    return `<tr data-v="${esc(r.verdict)}" data-notable="${r.notable?'1':'0'}" data-gl="${esc(glState)}"`
+      + ` data-liab="${(r.liabilities||[]).length?'1':'0'}" data-contact="${r.paratope_contact?'1':'0'}"`
+      + ` data-chain="${esc(r.chain)}" data-resno="${esc(r.sequence_position)}" data-aa="${esc(r.aa)}"`
+      + ` class="rt-clickable" title="Show this residue in the 3D model">`
+      + cols.map(c=>rtCell(c, r, ctx)).join('') + '</tr>';
+  }).join('');
+  return `<p class="note" style="margin:0 0 7px">Scroll the table horizontally to see every evidence column. Focus a residue to inspect it in an available structure.</p><div class="rt-wrap" tabindex="0" role="region" aria-label="Residue evidence table"><table class="rt"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function rtBadgeKey(cols, rows){
+  const parts = [];
+  const seen = new Map();
+  for(const c of cols){ const d = RT_COLS[c]; if(d && d[1]) seen.set(d[1], d[2]); }
+  const words = {measured:'measured from the structure you supplied',
+                 predicted:'predicted, not measured',
+                 structure:'needs a structure, empty on a sequence-only run'};
+  if(seen.size) parts.push(`<b>Columns.</b> Hover any header for what it holds and its units. ${
+    [...seen].map(([b,l])=>`<span class="th-b" data-b="${esc(b)}">${esc(l)}</span> ${esc(words[b]||b)}`).join(' · ')}.`);
+  // An unexplained glyph is the same failure as an unexpanded acronym, so
+  // the arrow is only drawn when it is also defined, and only when some row
+  // on this page actually carries one.
+  const softened = (rows||[]).filter(r=>(r.verdict_basis||[]).includes('germline')
+                                      || (r.verdict_basis||[]).includes('precedent'));
+  if(softened.length) parts.push(
+    `<b>Call ↓</b> on ${softened.length} position${softened.length===1?'':'s'} means the call was
+     <b>demoted from evaluate to watch</b>: the liability is real, but it sits in framework and is
+     either germline-encoded or carried by an approved or Phase-III drug at the same position.
+     Evidence of tolerance, not proof — hover the call for which applies. A plain
+     <span class="v v-watch">watch</span> is the ordinary case: a liability that was not high
+     priority, or not yet exposure-assessed.`);
+  return parts.length
+    ? `<p class="note" style="margin-top:9px">${parts.join('</p><p class="note" style="margin-top:6px">')}</p>`
+    : '';
+}
+
+function rtGermlineFooter(table){
+  const g = table.germline_counts || {};
+  const alt = (table.rows.find(r=>r.alt_scheme)||{}).alt_scheme;
+  return `<p class="note" style="margin-top:6px">Compared against <b>${
+    esc((table.rows.find(r=>r.germline_allele)||{}).germline_allele || 'no assigned allele')
+  }</b>. ${g.mismatch_framework
+    ? `<b>${esc(g.mismatch_framework)} framework position${g.mismatch_framework===1?'':'s'} differ</b> — worth reviewing.`
+    : 'Framework matches throughout.'}
+    ${g.mismatch_cdr ? `${esc(g.mismatch_cdr)} CDR1/2 position${g.mismatch_cdr===1?'':'s'} differ, which is expected in a matured antibody.` : ''}
+    ${alt ? `An arrow in Region means IMGT and ${esc(alt)} disagree about whether the position is in a CDR.` : ''}</p>`;
+}
+
+function rtFrameNote(table){
+  const miss = table.missing_layers||[];
+  return `<p class="note">${esc(table.frame)}${
+    miss.length ? ` Not yet joined: ${esc(miss.join(', '))}. ${esc(table.caveat)}` : ''}</p>`;
+}
+
+function rtUsable(table){ return !!(table && !table.error && (table.rows||[]).length); }
+
+function rtUnavailable(table){
+  return `<section class="card"><p class="note" style="margin:0">${
+    esc((table&&table.error) || 'The per-residue table could not be built.')}</p></section>`;
+}
+
+function rtContext(table, epitope){
+  return {epi: rtEpitopeIndex(epitope),
+          alt: (table.rows.find(r=>r.alt_scheme)||{}).alt_scheme,
+          legend: table.verdict_legend || {}};
+}
+
+// ---- 1. chemical liabilities --------------------------------------------
+// The positions where the motif scan found chemistry. "On antigen" stays in
+// this table even though contacts have their own: whether a liability sits
+// on the binding surface is the first thing that decides how to fix it.
+function renderLiabilityTable(table, epitope){
+  if(!rtUsable(table)) return `<h2>Chemical liabilities</h2>${rtUnavailable(table)}`;
+  const ctx = rtContext(table, epitope);
+  const rows = table.rows.filter(r=>(r.liabilities||[]).length);
+  const miss = table.missing_layers||[];
+  if(!rows.length)
+    return `<h2>Chemical liabilities <span class="count">none found</span></h2>
+      <section class="card"><p style="margin:0">The motif scan ran over every position and found
+      no deamidation, isomerization, oxidation, glycosylation or cleavage motif. That is a
+      result, not a gap.</p>${miss.length?`<p class="note">Not yet joined: ${esc(miss.join(', '))}.</p>`:''}</section>`;
+  const onSurface = rows.filter(r=>r.paratope_contact).length;
+  const cols = ['Chain','Pos','AA','IMGT','Region','Liability','Germline','Precedent','Exposure','Predicted contact']
+    .concat(Object.keys(ctx.epi).length ? ['To epitope'] : []).concat(['Call','Next step']);
+  return `<h2>Chemical liabilities <span class="count">${rows.length} position${rows.length===1?'':'s'}${
+      onSurface?` · ${onSurface} on the binding surface`:''}</span></h2>
+    <section class="card">
+      <div class="rt-why"><b>What this is.</b> Every position where the motif scan found a
+        chemical liability, and nothing else. <b>Call</b> describes the chemistry alone;
+        whether the position is also a predicted antigen contact is its own column, and
+        <b>Next step</b> is what the two together call for. Predicted binding-surface positions carrying no
+        liability have their own table below; the full joined frame is under
+        <i>All residues</i>.${onSurface?` <b>${onSurface}</b> of these also sit on the predicted
+        binding surface, so a substitution there edits the paratope.`:''}</div>
+      ${rtTable(rows, cols, ctx)}
+      ${rtBadgeKey(cols, rows)}
+      ${rtFrameNote(table)}
+    </section>`;
+}
+
+// ---- 2. predicted binding surface ---------------------------------------
+// These carry no chemistry. They are listed so that a fix proposed elsewhere
+// is not applied here by accident, not because anything is wrong with them.
+function renderParatopeResidueTable(table, epitope){
+  if(!rtUsable(table)) return '';
+  const ctx = rtContext(table, epitope);
+  const rows = table.rows.filter(r=>r.paratope_contact && !(r.liabilities||[]).length);
+  if(!rows.length) return '';
+  const cols = ['Chain','Pos','AA','IMGT','Region','Contact','Exposure']
+    .concat(Object.keys(ctx.epi).length ? ['To epitope'] : []).concat(['Germline aa']);
+  return `<h2>Predicted binding surface <span class="count">${rows.length} position${
+      rows.length===1?'':'s'}, no liability</span></h2>
+    <section class="card">
+      <div class="rt-why"><b>Nothing is wrong with these.</b> They are predicted antigen contacts
+        carrying no chemical liability, listed so a substitution proposed for a nearby liability
+        is not quietly applied to the binding surface. These are predictions, not measurements:
+        a contact here is a reason to re-test binding after a change, not a reason to rule the
+        position out.</div>
+      ${rtTable(rows, cols, ctx)}
+      ${rtBadgeKey(cols, rows)}
+    </section>`;
+}
+
+// ---- 3. the full joined frame -------------------------------------------
+function renderAllResiduesTable(table, epitope){
+  if(!rtUsable(table)) return '';
+  const ctx = rtContext(table, epitope);
+  const c = table.verdict_counts || {};
+  const g = table.germline_counts || {};
+  const cols = ['Chain','Pos','AA','IMGT'].concat(ctx.alt ? [ctx.alt] : [])
+    .concat(['Region','Germline aa','Exposure','Contact'])
+    .concat(Object.keys(ctx.epi).length ? ['To epitope'] : []).concat(['Call','Liability']);
+  return `<h2>All residues <span class="count">${table.rows.length} positions, every layer joined</span></h2>
+    <section class="card">
+      <div class="rt-bar">
+        <button class="rt-filter" data-f="all" aria-pressed="true">All ${esc(table.rows.length)}</button>
+        <button class="rt-filter" data-f="notable" aria-pressed="false">Notable (${esc(table.notable_rows)})</button>
+        ${g.mismatch_framework ? `<button class="rt-filter" data-f="gl-fr" aria-pressed="false">Framework ≠ germline (${esc(g.mismatch_framework)})</button>` : ''}
+        ${g.mismatch_cdr ? `<button class="rt-filter" data-f="gl-cdr" aria-pressed="false">CDR ≠ germline (${esc(g.mismatch_cdr)})</button>` : ''}
+        <span class="rt-spacer"></span>
+        ${['evaluate','watch','preserve'].filter(k=>c[k]).map(k=>
+          `<span class="v v-${k}" title="${esc((table.verdict_legend||{})[k]||'')}">${esc(c[k])} ${k}</span>`).join(' ')}
+      </div>
+      ${table.notable_legend ? `<div class="rt-why"><b>What “notable” means.</b> ${esc(table.notable_legend)}</div>` : ''}
+      ${rtTable(table.rows, cols, ctx)}
+      ${rtBadgeKey(cols, table.rows)}
+      ${rtFrameNote(table)}
+      ${rtGermlineFooter(table)}
+    </section>`;
+}
+
+function sourceBanner(src){
+  // Every geometric number on this page -- exposure, surface patches, the
+  // per-residue table, hydrogen bonds -- comes from one set of coordinates.
+  // Whether those were measured or predicted changes what the numbers are
+  // worth, and that is not something a reader should have to remember from
+  // a control they set several minutes ago.
+  if(src === 'experimental')
+    return `<p class="note" style="margin:0 0 10px"><span class="v v-clear">measured</span>
+      Exposure, surface patches and hydrogen bonds below are computed from the
+      structure you supplied. They carry that structure's resolution and its
+      unresolved regions, but they are not a prediction.</p>`;
+  return `<p class="note" style="margin:0 0 10px"><span class="v v-watch">predicted</span>
+    Exposure, surface patches and hydrogen bonds below are computed from a
+    <b>predicted</b> backbone. Side-chain placement is the least reliable part of
+    such a model, so treat these as triage. Supplying a crystal or cryo-EM
+    structure lets these quantities be calculated from experimental coordinates; it does not measure degradation or binding.</p>`;
+}
+
+function renderPatchRisk(risk){
+  if(!risk || !(risk.categories||[]).length) return '';
+  const cards = risk.categories.map(p => {
+    const cls = p.herceptin_like ? 'lower' : (p.priority || 'unknown');
+    return `<div class="pk-card pk-${esc(cls)}">
+      <div class="pk-call">${esc(p.call || p.priority || 'unassessed')}</div>
+      <strong style="display:block;margin:4px 0 6px">${esc(p.label)}</strong>
+      <div style="font-size:13px">${esc(p.concern)}</div>
+      ${(p.comparisons||[]).map(b=>`<div class="mf-out">${esc(b.label)}: ${esc(Number(b.query_value).toFixed(1))} ${esc(b.unit)} · panel ${esc(Number(b.min).toFixed(1))}–${esc(Number(b.max).toFixed(1))} (n=${esc(b.reference_n)})</div>`).join('')}
+      <details style="margin-top:7px"><summary style="cursor:pointer;font-size:12px;color:var(--muted)">Why, and what to test</summary>
+        ${(p.reasons||[]).map(r=>`<p class="note" style="margin-top:6px">${esc(r)}</p>`).join('')}
+        <p class="note"><b>Follow-up:</b> ${esc(p.action)}</p></details>
+    </div>`;
+  }).join('');
+  return `<h2>Surface patches</h2>
+    <section class="card">
+      <p class="note" style="margin:0 0 12px">Charged and hydrophobic patches on the predicted
+      surface. Priority means follow-up order, not a probability of failure.</p>
+      <div class="pk">${cards}</div>
+      <p class="note">${esc(risk.definition||'')} ${esc(risk.limitation||'')}</p>
+      ${(risk.sources||[]).map(x=>`<p class="note" style="margin-top:4px"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a></p>`).join('')}
+    </section>`;
+}
+
+// Composition estimates are useful context, but are not spatial risk evidence.
+function displayedMoleculeFlags(mf){
+  return ((mf||{}).flags||[]).filter(f =>
+    !['hydrophobic_patches','cdr_hydrophobicity','charge_asymmetry'].includes(f.id));
+}
+
+function renderMoleculeFlags(mf, risk){
+  if(!mf || mf.error || !(mf.flags||[]).length) return '';
+  // "Why is this green?" is the first question a reader asks of a coloured
+  // row, and the answer -- the band the value fell into -- was previously
+  // only in prose at the end of the policy sentence. It is now the second
+  // line of the row, with every band shown and the live one marked.
+  const rows = displayedMoleculeFlags(mf).map(f=>{
+    const b = f.bands;
+    const scale = b ? `<div class="mf-scale">${
+        (b.cuts||[]).map(([v,rule])=>
+          `<span class="mf-cut mf-cut-${esc(v)}${v===f.verdict?' on':''}">${esc(v)} ${esc(rule)}</span>`
+        ).join('')}</div>
+      <div class="mf-measure"><b>Calculated:</b> ${esc(b.measure)} &middot; ${esc(b.direction)}</div>` : '';
+    return `<div class="mf-row mf-${esc(f.verdict)}">
+      <div class="mf-dot"></div>
+      <div><strong>${esc(f.label)}</strong>
+        <div style="margin-top:3px">${esc(f.conclusion)}</div>
+        ${scale}
+        <div class="mf-out">Bears on: ${esc((f.outcomes||[]).join(', ').replace(/_/g,' '))}</div>
+        <details class="mf-why"><summary>Why this band, and what it cannot tell you</summary>
+          <p>${esc(f.detail||'')}</p><p>${esc(f.policy)}</p>
+          ${f.action?`<p><b>Next step &mdash;</b> ${esc(f.action)}</p>`:''}</details>
+      </div>
+      <div class="mf-val">${f.value==null?'\u2014':esc(f.value)}<div style="font-weight:400;font-size:11px;color:var(--muted)">${esc(f.units)}</div></div>
+    </div>`;}).join('');
+  const sug = mf.formulation_suggestion;
+  return `<h2>Molecule-level properties</h2>
+    <section class="card">
+      <p class="note" style="margin:0 0 12px">
+        <strong>${mf.basis==='full_length' ? esc(mf.assembly.format + ' \u2014 ' + mf.assembly.heavy.constant_label + (mf.assembly.light?' / '+mf.assembly.light.constant_label:'')) : 'Variable domains only'}.</strong>
+        pI ${esc(mf.fv.pi)}; net charge ${esc(mf.fv.net_charge_assay_ph)} e at pH ${esc(mf.assay_ph)} over ${esc(mf.fv.residues)} residues; colloidal margin judged at a formulation pH of ${esc(mf.formulation_ph)}.
+        ${esc(mf.fv.basis)} These are not per-residue properties, so they sit outside the table above.</p>
+      <div class="mf">${rows}</div>
+      
+      ${sug ? `<p class="note"><strong>Formulation pH.</strong> Between pH ${esc(sug.ph_range[0])} and ${esc(sug.ph_range[1])} the Fv stays at least 1.5 units from its pI; charge magnitude is greatest at pH ${esc(sug.highest_charge_ph)} (${esc(sug.net_charge_there)} e). ${esc(sug.basis)}</p>` : ''}
+      <p class="note">pI and net charge are composition-based estimates, not 3D surface measurements.
+        Surface hydrophobicity and charge-patch conclusions use the modeled or supplied coordinates
+        in <i>Surface patch risk</i>. Missing structural evidence remains unassessed.</p>
+      <p class="note">${esc(mf.limitation)} ${esc((mf.excluded||{}).immunogenicity||'')}</p>
+      ${mf.assembly ? `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px;color:var(--muted)">What was assumed to build the full-length molecule</summary>
+        <ul class="note" style="margin-top:8px;padding-left:18px">${
+          (mf.assembly.assumptions||[]).map(a=>`<li style="margin-bottom:5px">${esc(a)}</li>`).join('')}</ul>
+        <p class="note">Constant regions from ${esc(mf.assembly.source)} (${esc(mf.assembly.license)}), release ${esc(mf.assembly.release)}: heavy ${esc(mf.assembly.heavy.constant_accession)}${mf.assembly.light?', light '+esc(mf.assembly.light.constant_accession):''}. ${esc(mf.assembly.c_terminal_lysine_clipped?'Heavy-chain C-terminal lysine clipped, as in most expressed product.':'Heavy-chain C-terminal lysine retained.')}</p></details>` : ''}
+    </section>`;
+}
+
+function renderVerdict(cat, table, flags){
+  if(!cat || !cat.available) return '';
+  const L = cat.state_labels || {};
+  const why = {
+    measured: 'Calculated from supplied experimental coordinates. These are geometric estimates, not measured degradation, binding or manufacturing behaviour.',
+    modelled: 'Computed from a predicted backbone. Side-chain placement is the least reliable part of such a model, so treat this as triage.',
+    sequence: 'Read from the sequence alone. A structure would not change this call.',
+    none: 'Not assessed \u2014 the evidence for this category was not produced.'
+  };
+  const tiles = (cat.tiles||[]).map((t,i)=>`
+    <article class="tile" data-state="${esc(t.state)}">
+      <header><span class="tile-cat">${esc(t.label)}</span>
+        ${t.basis && t.basis!=='none'
+          ? `<button class="basis" type="button" data-b="${esc(t.basis)}"
+               aria-describedby="b${i}">${esc(t.basis)}</button>` : ''}</header>
+      <p class="tile-state">${esc(L[t.state]||t.state)}</p>
+      <p class="tile-detail">${esc(t.detail)}</p>
+      <p id="b${i}" class="sr-only">${esc(why[t.basis]||'')}</p>
+    </article>`).join('');
+  const verdict = {
+    high:'One or more categories need attention before this molecule advances.',
+    review:'Review the flagged properties and evidence gaps before choosing the next experiment.',
+    good:'No category is flagged in this computational screen; experimental readiness is not assessed.',
+    unknown:'Some categories could not be assessed. Review the available evidence and missing results.'}[cat.worst] || '';
+
+  // Key numbers. Facts, not calls, so they carry no colour -- the single
+  // exception is the panel count, which goes amber when a descriptor sits
+  // outside the observed range.
+  const fv = (flags||{}).fv || {};
+  const panel = cat.panel || {};
+  const num = (k,v,out) => v==null ? '' :
+    `<div class="keynum${out?' outside':''}"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`;
+  const nums = [
+    num('pI', fv.pi), num('Net charge', fv.net_charge_assay_ph),
+    num('FR \u2260 germline', (table&&table.germline_counts||{}).mismatch_framework,
+        ((table&&table.germline_counts||{}).mismatch_framework||0) > 0),
+    num('Notable residues', table && table.notable_rows),
+    panel.compared ? num('In panel range',
+      `${esc(panel.compared - (panel.above||[]).length)}/${esc(panel.compared)}`,
+      (panel.above||[]).length>0) : ''
+  ].join('');
+  const above = (panel.above||[]);
+  return `<section class="verdict">
+    <p class="verdict-call" data-worst="${esc(cat.worst)}">${esc(verdict)}</p>
+    <h2>At a glance</h2>
+    <div class="tiles">${tiles}</div>
+    <div class="keynums">${nums}</div>
+    <p class="note" style="margin-top:12px">
+      ${above.length ? `Above the reference panel range: ${above.map(esc).join(', ')}. ` : ''}
+      <b>The panel range is an observed minimum to maximum, not an acceptance
+      interval</b> \u2014 approved antibodies sit at its edges.
+      ${esc(cat.unknown_note||'')}</p>
+  </section>`;
+}
+
+function renderIngestion(ing){
+  if(!ing) return '';
+  const rows = Object.entries(ing.chains||{}).map(([label,c])=>`<tr>
+      <td><b>${esc(label)}</b></td><td>${esc(c.source_chain)}</td>
+      <td>${esc(c.residues_in_file)}</td><td>${esc(c.variable_domain_residues)}</td>
+      <td>${esc(c.constant_or_untyped_dropped)}</td></tr>`).join('');
+  const rec = Object.entries(ing.reconciliation||{}).map(([label,v])=>
+    `<li><b>${esc(label)}</b>: ${Math.round((v.identity_of_resolved||0)*100)}% of resolved
+      residues match your sequence; ${Math.round((v.coverage||0)*100)}% of it is resolved.
+      ${esc(v.note||'')}</li>`).join('');
+  return `<h2>Structure you supplied <span class="count">measured</span></h2>
+    <section class="card">
+      <p class="note" style="margin:0 0 10px">
+        <strong>${esc(ing.source_file||'uploaded structure')}</strong> \u00b7 ${esc(ing.source_format||'')}
+        \u00b7 copy ${esc((ing.copy_used||0)+1)} of ${esc(ing.copies_available||1)}
+        \u00b7 model ${esc((ing.model_used||0)+1)} of ${esc(ing.models_available||1)}
+        ${ing.has_antigen?`\u00b7 antigen <b>${esc((ing.antigen_chains||[]).join(', '))}</b> kept`
+                         :'\u00b7 no antigen in the file'}</p>
+      <div class="rt-wrap"><table class="rt"><thead><tr>
+        <th>Used as</th><th>Chain in file</th><th>Residues</th><th>V domain kept</th><th>Dropped</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+      ${rec?`<p class="note" style="margin-top:10px"><strong>Against the sequence you typed</strong></p>
+        <ul class="note" style="padding-left:18px">${rec}</ul>`:''}
+      ${(ing.problems||[]).map(w=>`<p class="note" style="color:var(--high)">${esc(w)}</p>`).join('')}
+      ${(ing.warnings||[]).map(w=>`<p class="note">${esc(w)}</p>`).join('')}
+      <p class="note">${esc(ing.note||'')}</p>
+    </section>`;
+}
+
+function renderEpitope(ep){
+  if(!ep) return '';
+  if(ep.status !== 'measured')
+    return `<h2>Epitope</h2><section class="card"><p class="note" style="margin:0">
+      ${esc(ep.reason || 'No antigen was present, so there is no epitope to measure.')}
+      Without an antigen the only signal is the <em>predicted paratope</em> \u2014 an inference
+      about where antigen would bind, not a measurement of where it does.</p></section>`;
+  const counts = (ep.contacts||[]).reduce((a,p)=>{a[p[0]]=(a[p[0]]||0)+1;return a;},{});
+  return `<h2>Epitope <span class="count">measured</span></h2>
+    <section class="card">
+      <p class="note" style="margin:0 0 10px"><strong>${esc(ep.contact_count)} residues within
+        ${esc(ep.contact_threshold_a)} \u00c5 of antigen ${esc((ep.antigen_chains||[]).join(', '))}</strong>
+        \u2014 ${Object.entries(counts).map(([k,v])=>esc(k)+' '+esc(v)).join(', ')}.
+        Distances in the supplied coordinates, not a prediction.</p>
+      <p class="mf-out" style="margin:0 0 10px">${(ep.contacts||[]).map(esc).join(' ')}</p>
+      <details><summary style="cursor:pointer;font-size:13px;color:var(--muted)">
+        Per-residue distance to antigen</summary>
+        <div class="rt-wrap" style="margin-top:8px"><table class="rt">
+        <thead><tr><th>Position</th><th>Distance (\u00c5)</th><th>Contact</th></tr></thead><tbody>${
+        (ep.residues||[]).filter(r=>!r.beyond_cutoff).map(r=>`<tr${r.contact?' class="b-high"':''}>
+          <td>${esc(r.position)}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums">${esc(r.distance_a)}</td>
+          <td>${r.contact?'yes':''}</td></tr>`).join('')}</tbody></table></div>
+      </details>
+      <p class="note">${esc(ep.note||'')}</p>
+    </section>`;
+}
+
+function renderEnsemble(sa){
+  const e = (sa||{}).ensemble;
+  if(!e || e.status !== 'ok') return '';
+  const n = (e.model_ids||[]).length;
+  const dis = e.band_disagreements || 0;
+  const plan = e.plan || {};
+  const skipped = Object.entries(plan.unusable||{});
+  // The headline is the disagreement count, not the model count: agreement is
+  // the uninteresting case and it is what the reader should be able to skip.
+  const verdict = dis === 0
+    ? `All ${n} models agree on the exposure band at every assessed residue.`
+    : `${dis} residue${dis===1?'':'s'} where the ${n} models disagree on the exposure band.`;
+  return `<h2>Structure ensemble <span class="count">${esc(n)} models</span></h2>
+    <section class="card">
+      <p class="note" style="margin:0 0 10px"><strong>${esc(verdict)}</strong>
+        ${esc(e.rule)}</p>
+      ${skipped.length ? `<p class="note">Not used: ${skipped.map(([id,why])=>
+          `model ${esc(id)} (${esc(why)})`).join(', ')}.</p>` : ''}
+      ${(e.failed_models||[]).length ? `<p class="note" style="color:var(--high)">Failed during folding: ${
+          e.failed_models.map(f=>`model ${esc(f.model_id)} \u2014 ${esc(f.error||'unknown')}`).join('; ')}.</p>` : ''}
+      <p class="note">${esc(e.caveat)}</p>
+    </section>`;
+}
+
+function renderDeepSP(ds){
+  if(!ds) return '';
+  if(ds.status === 'not_installed')
+    return `<h2>Sequence-only spatial descriptors</h2><section class="card">
+      <p class="note" style="margin:0">${esc(ds.reason)} Fetch them with
+      <code>${esc(ds.build_command)}</code>. These are the same aggregation and charge
+      properties the structure route reports, but predicted from sequence in milliseconds
+      and under an MIT licence rather than an academic-only one.</p></section>`;
+  if(ds.status === 'skipped' || ds.status === 'error')
+    return `<h2>Sequence-only spatial descriptors</h2><section class="card">
+      <p class="note" style="margin:0">${esc(ds.reason)}</p></section>`;
+  const rows = (ds.highlights||[]).map(h=>{
+    const pct = h.percentile;
+    const width = pct==null ? 0 : Math.max(1, Math.min(100, pct));
+    return `<div class="ds-row ${h.flagged?'ds-flag':''}">
+      <div><div class="ds-name">${esc(h.label)}</div>
+        <div class="ds-note">${esc(h.note)} Bears on: ${esc(String(h.risk).replace(/_/g,' '))}.</div></div>
+      <div class="ds-val">${esc(h.value)}</div>
+      <div><div class="ds-bar"><span style="width:${width}%"></span>
+        <div class="ds-mark" style="left:95%"></div></div>
+        <div class="ds-pct">${pct==null?'no reference':esc(pct)+'th percentile'}${h.flagged?' \u2014 flagged':''}</div></div>
+    </div>`;}).join('');
+  const ref = ds.reference;
+  const warn = ds.warning
+    ? `<div class="mf-tradeoff"><strong>Prediction not usable.</strong> ${esc(ds.warning)}</div>` : '';
+  const note = ds.note ? `<p class="note">${esc(ds.note)}</p>` : '';
+  return `<h2>Sequence-only spatial descriptors</h2>
+    <section class="card">
+      <p class="note" style="margin:0 0 10px"><strong>Predicted from the paired Fv sequence,
+        without folding.</strong> Spatial aggregation propensity and spatial charge maps are
+        normally read off a structure; DeepSP predicts them directly, which is what makes this
+        affordable in batch.</p>
+      <div class="refbox">
+        <div class="refbox-h">Percentile against what</div>
+        <p><b>${ref ? esc(Number(ref.n).toLocaleString()) : 'the reference'} natural human Fv pairs</b>
+           from the Observed Antibody Space \u2014 ordinary B-cell repertoire sequences, not drugs.
+           A value at the 70th percentile means 70% of those natural antibodies score lower.
+           The tick on each bar is the ${ref ? esc(ref.flag_percentile) : '95'}th percentile,
+           above which this screen flags.</p>
+        <p class="refbox-not"><b>This is not the clinical panel.</b> The percentiles under
+           <i>Panel comparison</i> below are against approved and Phase\u2011III antibodies, a
+           different and much smaller population. A molecule can sit high here and well inside
+           the panel there; being unusual among natural antibodies is not a liability.</p>
+      </div>
+      ${warn}
+      <div class="ds">${rows}</div>
+      ${note}
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px;color:var(--muted)">All thirty descriptors</summary>
+        <table style="margin-top:8px"><thead><tr><th>Descriptor</th><th>Value</th></tr></thead><tbody>${
+          Object.entries(ds.descriptors||{}).map(([k,v])=>
+            `<tr><td>${esc(k.replace(/_/g,' '))}</td><td style="text-align:right;font-variant-numeric:tabular-nums">${esc(v)}</td></tr>`).join('')
+        }</tbody></table></details>
+    </section>`;
+}
+
+
+// ---- report sections as panels -------------------------------------------
+// A full report is ~12 sections and several thousand rows. Read top to bottom
+// it is a scroll; read as a question ("what did the panel say?") it is a
+// search. Each section is therefore its own disclosure, closed by default,
+// with its headline count on the summary line so the page can be scanned
+// without opening anything.
+//
+// Sections are already delimited by their own <h2>, so the grouping happens
+// on the assembled parts rather than by re-parsing the finished HTML: no
+// renderer has to know it is sitting inside a panel, and a section added
+// later is collapsed automatically.
+const PANEL_OPEN_BY_DEFAULT = new Set([
+  'chemical-liabilities',   // the headline finding
+  '3d-structure',           // the model, where it can be seen next to the table
+]);
+
+function slugify(text){
+  return String(text).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48);
+}
+
+function panelise(parts){
+  const preamble = [];
+  const groups = [];
+  for(const part of parts){
+    if(typeof part !== 'string' || !part.trim()) continue;
+    if(/^\s*<h2[\s>]/.test(part)) groups.push([part]);
+    else if(groups.length) groups[groups.length-1].push(part);
+    else preamble.push(part);
+  }
+  if(!groups.length) return parts.join('');
+
+  const panels = groups.map(group => {
+    const first = group[0];
+    const m = first.match(/^\s*<h2[^>]*>([\s\S]*?)<\/h2>/);
+    const inner = m ? m[1] : 'Section';
+    const rest = m ? first.slice(m[0].length) : first;
+    // The count span is the section's own one-line summary; it belongs on the
+    // closed row, not inside the body where it cannot be seen.
+    const countM = inner.match(/<span class="count">([\s\S]*?)<\/span>/);
+    const title = inner.replace(/<span class="count">[\s\S]*?<\/span>/,'').trim();
+    const id = 'sec-' + slugify(title.replace(/<[^>]+>/g,''));
+    return {id, title, body: [rest, ...group.slice(1)].join(''),
+            summary: countM ? countM[1] : '',
+            open: PANEL_OPEN_BY_DEFAULT.has(id.replace(/^sec-/,''))};
+  });
+
+  const nav = `<div class="secnav">
+    <label for="sec-jump">Jump to</label>
+    <select id="sec-jump">${panels.map(p=>
+      `<option value="${esc(p.id)}">${esc(p.title.replace(/<[^>]+>/g,''))}</option>`).join('')}</select>
+    <button type="button" class="ghost" id="sec-expand">Expand all</button>
+    <button type="button" class="ghost" id="sec-collapse">Collapse all</button>
+  </div>`;
+
+  return preamble.join('') + nav + panels.map(p=>
+    `<details class="panel" id="${esc(p.id)}"${p.open?' open':''}>
+       <summary><span class="p-title">${p.title}</span>${
+         p.summary?`<span class="p-sum">${p.summary}</span>`:''}</summary>
+       <div class="p-body">${p.body}</div>
+     </details>`).join('');
+}
+
+function wirePanels(){
+  const all = () => Array.from(document.querySelectorAll('details.panel'));
+  const jump = document.getElementById('sec-jump');
+  if(jump) jump.addEventListener('change', () => {
+    const target = document.getElementById(jump.value);
+    if(!target) return;
+    if(window.AtlasWorkspace) window.AtlasWorkspace.reveal(target.id);
+    target.open = true;
+    target.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+  const expand = document.getElementById('sec-expand');
+  const collapse = document.getElementById('sec-collapse');
+  if(expand) expand.addEventListener('click', () => all().forEach(d => d.open = true));
+  if(collapse) collapse.addEventListener('click', () => all().forEach(d => d.open = false));
+  // A printed or PDF-captured page has to carry every section whatever is
+  // open on screen, and has to put back what the reader had open afterwards.
+  window.addEventListener('beforeprint', () => all().forEach(d => {
+    if(!d.open){ d.dataset.wasClosed = '1'; d.open = true; }
+  }));
+  window.addEventListener('afterprint', () => all().forEach(d => {
+    if(d.dataset.wasClosed === '1'){ d.open = false; delete d.dataset.wasClosed; }
+  }));
+}
+
+
+// ---- what to measure next ------------------------------------------------
+// Assay guidance is separate from computed findings. No universal pass thresholds.
+const ASSAY_GUIDANCE = {
+  hydrophobic: {
+    first: 'HIC against reference antibodies using the same method',
+    readout: 'Hydrophobic retention and sample recovery.',
+    decision: 'Assess whether the modeled surface signal corresponds to elevated hydrophobic interaction; HIC does not measure aggregation.',
+    escalation: 'SEC before and after relevant stress to assess soluble aggregate formation; investigate poor recovery.'
+  },
+  positive: {
+    first: 'Heparin-affinity chromatography',
+    readout: 'Retention relative to reference antibodies under matched conditions.',
+    decision: 'Test interaction with a negatively charged surface. This is not a quantitative PK prediction.',
+    escalation: 'PSR/PSP polyspecificity assay for broader nonspecific binding; add self-association and direct viscosity testing if high concentration is intended.'
+  },
+  negative: {
+    first: 'DLS interaction parameter (kD), or a buffer-compatible SINS assay for larger panels',
+    readout: 'Concentration-dependent diffusion or nanoparticle spectral shift as a self-interaction readout.',
+    decision: 'Test whether the charge distribution accompanies self-association; negative charge alone is not adverse.',
+    escalation: 'Direct viscosity at the intended concentration and formulation. Conventional AC-SINS is not suitable for every buffer; consider CS-SINS or PS-SINS for histidine formulations.'
+  },
+  deamidation: {
+    first: 'Relevant thermal/pH stress followed by site-resolved LC–MS/MS peptide mapping',
+    readout: 'Site-specific modification relative to an unstressed control and across time points.',
+    decision: 'Determine whether the predicted chemical liability occurs in the tested conditions.',
+    escalation: 'Binding and functional activity before and after stress; establish relevance to intended storage and processing.'
+  },
+  isomerization: {
+    first: 'Relevant thermal/pH stress followed by peptide mapping with an isomer-resolving method',
+    readout: 'Site-specific Asp/isoAsp or succinimide changes relative to an unstressed control.',
+    decision: 'Determine whether isomerization occurs; intact mass alone cannot distinguish equal-mass isomers.',
+    escalation: 'Confirm site assignment and compare binding/activity before and after stress.'
+  },
+  oxidation: {
+    first: 'Targeted oxidative stress followed by site-resolved LC–MS/MS peptide mapping',
+    readout: 'Met/Trp modification relative to an unstressed control.',
+    decision: 'Confirm oxidation susceptibility. Thermal stress alone does not probe every oxidation pathway.',
+    escalation: 'Binding/activity before and after stress; assess relevance to light, storage and process exposure.'
+  },
+  contact: {
+    first: 'SPR or BLI comparing parent and proposed variant, plus a relevant functional assay',
+    readout: 'Binding kinetics/affinity and biological activity under matched assay conditions.',
+    decision: 'Determine whether an edit near a predicted contact retains binding and function. Predicted contact is not itself a liability.',
+    escalation: 'HDX-MS if regional interface mapping would resolve uncertainty. Protection can be indirect; use X-ray crystallography or cryo-EM only when a suitable complex and a decision justify detailed structural work.'
+  }
+};
+
+function liabilityAssays(liabilities){
+  const keys = new Set();
+  for(const liability of liabilities||[]){
+    const kind = String(liability.kind||'').toLowerCase();
+    if(kind.includes('deamidation')) keys.add('deamidation');
+    if(kind.includes('isomerization')) keys.add('isomerization');
+    if(kind.includes('oxidation')) keys.add('oxidation');
+  }
+  return [...keys].map(key => ASSAY_GUIDANCE[key]);
+}
+
+function assayGuidanceHtml(assay){
+  return `<div class="assay-guidance"><b>First assay:</b> ${esc(assay.first)}
+    <p><b>Readout:</b> ${esc(assay.readout)}</p>
+    <p><b>Decision informed:</b> ${esc(assay.decision)}</p>
+    <p class="note"><b>Escalation if needed:</b> ${esc(assay.escalation)}</p></div>`;
+}
+
+function renderShortlist(residueTable, mf, risk, deepsp){
+  const rows = [];
+  const table = residueTable || {};
+  const liabilities = (table.rows || []).filter(r => (r.liabilities || []).length);
+  // Include every selected site; never silently truncate the list to six residues.
+  for(const r of liabilities.filter(r => ['evaluate','watch'].includes(r.verdict))){
+    const assessed = typeof r.exposure === 'number' && Number.isFinite(r.exposure) && r.exposure >= 0;
+    const assays = assessed ? liabilityAssays(r.liabilities) : [];
+    rows.push({
+      concern: `${(r.liabilities||[]).map(l => LIABILITY_SHORT[l.kind]||l.kind).join('; ')} at ${r.chain} ${r.aa}${r.sequence_position}`,
+      where: `IMGT ${r.imgt} · ${r.imgt_region} · ${r.verdict}`,
+      evidence: assessed ? `Relative exposure ${r.exposure}${r.paratope_contact ? '; predicted contact' : ''}` : 'Structural exposure not assessed',
+      uncertainty: assessed
+        ? 'Exposure is calculated from modeled or supplied coordinates; modification and functional effects remain unmeasured.'
+        : 'Structural coverage is incomplete. This site has not received a structural assessment.',
+      assays,
+      measure: !assessed ? 'Computational follow-up: resolve structural coverage before prioritizing this site.'
+        : !assays.length ? 'Analytical review: select a site-specific method for this chemistry; no generic forced-stress assay is assigned.' : '',
+      note: r.paratope_contact && assessed ? 'For a stressed sample or proposed substitution at this contact, also compare binding and functional activity.' : ''
+    });
+  }
+  const surfaceCategories = ((risk||{}).categories||[]);
+  for(const category of (surfaceCategories.length ? surfaceCategories : [{
+    label: 'Surface properties not assessed', priority: 'unknown', count: null
+  }])){
+    if(!['high','review','unknown'].includes(category.priority)) continue;
+    const incomplete = category.count == null || category.provisional || (risk||{}).complete === false;
+    const assay = ASSAY_GUIDANCE[category.kind];
+    rows.push({
+      concern: category.label || category.kind,
+      where: 'Modeled / supplied structure',
+      evidence: category.count == null ? 'Structural assessment unavailable'
+        : `${category.count} qualifying spatial patches; largest summed exposed side-chain area ${category.largest_area_a2 ?? '—'} Å²`,
+      uncertainty: incomplete
+        ? 'Structural coverage is incomplete. Observed patches are provisional; absence of patches is not a pass.'
+        : 'A geometric screen of the analyzed structure; manufacturing performance is not measured.',
+      assays: category.priority !== 'unknown' && assay ? [assay] : [],
+      measure: category.priority === 'unknown'
+        ? 'Computational follow-up: complete or repair structural coverage, then repeat the surface analysis.'
+        : !assay ? (category.action || 'Review the finding with an analytical scientist before selecting an assay.') : '',
+      note: incomplete && category.priority !== 'unknown' ? 'Computational follow-up: resolve missing structural coverage.' : ''
+    });
+  }
+  const contacts = (table.rows||[]).filter(r => r.paratope_contact && typeof r.exposure === 'number' && Number.isFinite(r.exposure) && r.exposure >= 0);
+  if(contacts.length) rows.push({
+    concern: 'If engineering a predicted contact', where: `${contacts.length} structurally assessed predicted contact position(s)`,
+    evidence: 'Contact prediction; not an experimentally established interface',
+    uncertainty: 'Use this follow-up if selecting a substitution near the binding site; it is not a new liability call.',
+    assays: [ASSAY_GUIDANCE.contact], measure: '', note: ''
+  });
+  const baseline = [
+    ['SEC', 'Monomer content, soluble high-molecular-weight species and sample recovery.', 'Establish starting quality and compare before/after relevant stress.'],
+    ['nanoDSF', 'Thermal unfolding transitions and aggregation onset where measured.', 'Prioritize stability follow-up; a high melting temperature does not establish shelf life. Escalate to DSC when domain-level thermal characterization is needed.'],
+    ['HIC', 'Hydrophobic retention relative to reference antibodies in the same method.', 'Establish an experimental hydrophobicity baseline, even when no qualifying spatial patch is found.'],
+    ['Binding and function', 'SPR/BLI binding measurements plus a relevant functional assay.', 'Establish parent activity for later stress and variant comparisons.']
+  ];
+  return `<h2>What to measure next <span class="count">Baseline + ${rows.length} targeted follow-up${rows.length===1?'':'s'}</span></h2>
+    <section class="card assay-plan">
+      <div class="rt-why"><b>Follow-up informed by the structural assessment.</b>
+        The baseline panel applies even when the computational screen raises no concerns.
+        Targeted assays test the findings below; advanced methods are escalations, not routine requirements.
+        <b>Absence from this list is not a pass:</b> these recommendations do not establish manufacturing readiness.</div>
+      <h3>Baseline panel</h3>
+      <p class="note">Use matched controls and relevant formulation conditions. This is a starting panel, not a complete CMC or release-testing program.</p>
+      <div class="assay-baseline">${baseline.map(([name,readout,decision])=>`<div class="assay-baseline-item"><strong>${esc(name)}</strong><p>${esc(readout)}</p><p class="note">${esc(decision)}</p></div>`).join('')}</div>
+      <h3>Targeted follow-up</h3>
+      ${rows.length ? `<div class="rt-wrap" tabindex="0" role="region" aria-label="Targeted assay recommendations"><table class="rt"><thead><tr>
+        <th>Finding / trigger</th><th>Evidence and uncertainty</th><th>Suggested assay and decision it informs</th>
+      </tr></thead><tbody>${rows.map(r=>`<tr>
+        <td class="assay-finding"><b>${esc(r.concern)}</b><p class="note">${esc(r.where)}</p></td>
+        <td class="assay-evidence">${esc(r.evidence)}<p class="note">${esc(r.uncertainty)}</p></td>
+        <td class="assay-recommendation">${(r.assays||[]).map(assayGuidanceHtml).join('')}${r.measure?`<p>${esc(r.measure)}</p>`:''}${r.note?`<p class="note">${esc(r.note)}</p>`:''}</td>
+      </tr>`).join('')}</tbody></table></div>` : '<p>No additional targeted follow-up was selected. Retain the baseline panel.</p>'}
+      <p class="note">Assay guidance is not experimental evidence. Establish method-specific controls and acceptance criteria; no universal pass/fail thresholds are implied.</p>
+      <details><summary>Evidence behind the assay recommendations</summary>
+        <ul class="note">
+          <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12674332/" target="_blank" rel="noopener">Comparative biophysical developability assays</a></li>
+          <li><a href="https://pubmed.ncbi.nlm.nih.gov/30526254/" target="_blank" rel="noopener">Deamidation and isomerization in 131 antibodies</a></li>
+          <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5098445/" target="_blank" rel="noopener">CDR oxidation and functional effects</a></li>
+          <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6927760/" target="_blank" rel="noopener">Heparin chromatography and clearance risk</a></li>
+          <li><a href="https://www.tandfonline.com/doi/abs/10.1080/19420862.2026.2709948" target="_blank" rel="noopener">SINS assay compatibility and viscosity</a></li>
+          <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10730160/" target="_blank" rel="noopener">Experimental comparison of epitope-mapping methods</a></li>
+        </ul>
+      </details>
+    </section>`;
+}
+
+
+// ---- liability fix workbench --------------------------------------------
+// Every flagged site used to get its own stacked card, each with its own
+// header and its own five-column table. Ten sites meant ten tables and a
+// page you scrolled rather than read, and comparing two sites meant
+// scrolling between them with nothing held still.
+//
+// One list, one detail pane. The list is the comparison -- every site's
+// severity, region, exposure and proposal count side by side in a column you
+// can scan -- and the pane is the depth. Each site's detail is rendered up
+// front and hidden rather than built on demand: the "test" buttons are bound
+// once after render, printing has to carry every site, and lazily building
+// panes would quietly break both.
+function fixSiteSignals(site){
+  const exposure = site.exposure || {};
+  const proposals = site.proposals || [];
+  const contact = proposals.map(c => c.paratope || {})
+                           .find(p => p.probability != null && p.likely_contact);
+  const comparators = site.comparators || {};
+  const precedent = (comparators.approved || 0) + (comparators.phase_iii || 0);
+  return {exposure, proposals, contact, comparators, precedent,
+          allPreserved: proposals.length > 0 && proposals.every(c => c.edits_preserved_position)};
+}
+
+function renderFixWorkbench(fixable){
+  const total = fixable.reduce((n, site) => n + (site.proposals || []).length, 0);
+
+  const rows = fixable.map((site, i) => {
+    const [cls, word] = severityOf(site);
+    const g = fixSiteSignals(site);
+    const band = g.exposure.exposure_band ? esc(g.exposure.exposure_band) : 'exposure n/a';
+    return `<button class="wb-item" role="tab" id="wb-tab-${i}" data-i="${i}"
+        aria-selected="${i === 0}" aria-controls="wb-pane-${i}" tabindex="${i === 0 ? 0 : -1}">
+      <span class="wb-row">
+        <span class="pos">${esc(site.chainLabel)} ${esc((site.motif || '')[0] || '')}${esc(site.position)}</span>
+        <span class="badge ${cls}">${esc(word)}</span>
+      </span>
+      <span class="wb-what">${esc(site.kind)}</span>
+      <span class="wb-sig">
+        <span>${esc(site.region || '')}</span>
+        <span>${band}</span>
+        <span>${g.proposals.length} fix${g.proposals.length === 1 ? '' : 'es'}</span>
+        ${g.contact ? '<span class="wb-contact">on contact</span>' : ''}
+        ${g.precedent ? `<span class="wb-prec">${esc(g.precedent)} clinical</span>` : ''}
+      </span>
+    </button>`;
+  }).join('');
+
+  const panes = fixable.map((site, i) => {
+    const g = fixSiteSignals(site);
+    const expText = g.exposure.relative_sidechain_sasa != null
+      ? `relative exposure ${g.exposure.relative_sidechain_sasa}${g.exposure.exposure_band ? ` (${g.exposure.exposure_band})` : ''}`
+      : 'exposure not available';
+    const k = g.comparators;
+    const precedentLine = !k.searched ? ''
+      : g.precedent
+        ? `<p class="wb-note wb-ok">Carried by ${esc(k.approved)} approved and ${esc(k.phase_iii)} Phase-III ${g.precedent === 1 ? 'drug' : 'drugs'} at this position${k.drugs && k.drugs.length ? ` \u2014 ${esc(k.drugs.slice(0, 3).join(', '))}` : ''}. Retention is not proof of tolerance.</p>`
+        : `<p class="wb-note">No approved or Phase-III drug in the library carries this motif at this position.</p>`;
+    const contactLine = (g.allPreserved && g.contact)
+      ? `<p class="wb-note wb-warn">This liability sits on a predicted antigen contact (${(g.contact.probability * 100).toFixed(0)}%). Every fix here edits the contact surface, so weigh the binding risk against the liability and test accordingly.</p>`
+      : '';
+
+    const body = (site.proposals || []).map(c => {
+      const cons = (c.conservativeness || {}).score;
+      const pct = c.combined_precedent_percent;
+      const p = c.paratope || {};
+      const contact = p.probability != null
+        ? `<span class="pill ${p.likely_contact ? 'bad' : 'good'}">${(p.probability * 100).toFixed(0)}% ${esc(p.likely_contact ? 'likely' : 'unlikely')}</span>`
+        : '<span class="pill">n/a</span>';
+      const flags = ((c.developability_delta || {}).flags) || [];
+      const flagHtml = flags.length
+        ? `<ul class="flags">${flags.map(f => `<li class="${esc(f.kind === 'hydrophobic_patch' && f.severity === 'good' ? 'good' : f.severity)}"><b>${esc(f.severity)}</b> ${esc(f.text)}</li>`).join('')}</ul>`
+        : '<span class="note" style="margin:0">no notable charge or aggregation change</span>';
+      return `<tr>
+        <td><span class="mut">${esc(c.mutation)}</span>
+          ${c.clean ? '<span class="pill good">no new screened motif</span>' : '<span class="pill bad">creates a new liability</span>'}
+          ${c.standard_choice ? '<span class="pill">conventional</span>' : ''}
+          ${c.edits_preserved_position && !g.allPreserved ? '<span class="pill warn">edits a predicted contact</span>' : ''}
+          <button class="addfix" data-fix="${esc(c.chain)}:${esc(c.mutation)}" title="Add to the variant comparison">Add to comparison</button>
+          <button class="preview-local" data-chain="${esc(c.chain||site.chainLabel)}" data-position="${esc(site.position)}" data-to="${esc(c.mutation.slice(-1))}" type="button">Preview local structure</button></td>
+        <td>${cons != null ? cons.toFixed(2) : '\u2013'}<div class="bar"><i style="width:${Math.round((cons || 0) * 100)}%"></i></div></td>
+        <td>${pct != null ? esc(pct) + '%' : '\u2013'}</td>
+        <td>${contact}</td>
+        <td>${flagHtml}</td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="wb-pane" id="wb-pane-${i}" role="tabpanel" aria-labelledby="wb-tab-${i}"${i === 0 ? '' : ' hidden'}>
+      <div class="wb-head">
+        <span class="pos">${esc(site.chainLabel)} ${esc((site.motif || '')[0] || '')}${esc(site.position)}</span>
+        <span class="what">${esc(site.kind)}</span>
+        <span class="where">motif <code>${esc(site.motif)}</code> \u00b7 ${esc(site.region || '')} \u00b7 ${esc(String(site.imgt_number || '').replace(/^[HKL]/, 'IMGT '))} \u00b7 ${esc(expText)}</span>
+      </div>
+      ${precedentLine}${contactLine}
+      <table class="fixes"><thead><tr>
+        <th>Substitution</th><th>Residue similarity</th><th>Reference frequency</th><th>Predicted contact</th><th>Predicted tradeoffs</th>
+      </tr></thead><tbody>${body}</tbody></table>
+      ${site.withheld_candidate_count ? `<p class="note">${esc(site.withheld_candidate_count)} further candidate${site.withheld_candidate_count === 1 ? '' : 's'} ranked below these.</p>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<h2>Liability substitution proposals <span class="count">${fixable.length} site${fixable.length === 1 ? '' : 's'} \u00b7 ${total} proposal${total === 1 ? '' : 's'}</span></h2>
+    <section class="card wb">
+      <div class="wb-list" role="tablist" aria-orientation="vertical" aria-label="Flagged sites">${rows}</div>
+      <div class="wb-detail">${panes}</div>
+    </section>`;
+}
+
+function wireFixWorkbench(){
+  const list = document.querySelector('.wb-list');
+  if(!list) return;
+  const tabs = Array.from(list.querySelectorAll('.wb-item'));
+  const select = (index, moveFocus) => {
+    tabs.forEach((tab, i) => {
+      const on = i === index;
+      tab.setAttribute('aria-selected', String(on));
+      tab.tabIndex = on ? 0 : -1;
+      const pane = document.getElementById(`wb-pane-${i}`);
+      if(pane) pane.hidden = !on;
+    });
+    if(moveFocus && tabs[index]) tabs[index].focus();
+  };
+  list.addEventListener('click', event => {
+    const tab = event.target.closest('.wb-item');
+    if(tab) select(Number(tab.dataset.i), false);
+  });
+  // A list you can only reach with a mouse is not a list, and the roving
+  // tabindex above is meaningless without the keys that move it.
+  list.addEventListener('keydown', event => {
+    const current = tabs.findIndex(t => t.getAttribute('aria-selected') === 'true');
+    const last = tabs.length - 1;
+    const next = {ArrowDown: current + 1, ArrowUp: current - 1,
+                  Home: 0, End: last}[event.key];
+    if(next === undefined) return;
+    event.preventDefault();
+    select(Math.max(0, Math.min(last, next)), true);
+  });
+}
+
+function render(analysis, fixes, foldError, foldId, structureAnalysis, patchRisk, ingestion, epitope, structureSource, categories){
+  // Attribution belongs with the claim, not in an appendix. cite(key) emits
+  // the line for whichever section is being rendered.
+  const cite = key => citeBlock({citations: {...((fixes&&fixes.citations)||{}),
+                                             ...((analysis.citations)||{})}}, key);
+  const out = [];
+  const sites = [];
+  for(const [label, chain] of Object.entries(fixes.chains||{}))
+    for(const s of chain.sites||[]) sites.push({...s, chainLabel: label});
+  const fixable = sites.filter(s => (s.proposals||[]).length);
+  const cdrCount = sites.filter(s=>s.in_cdr).length;
+
+  // verdict
+  const headline = fixable.length === 0
+    ? 'No substitution proposals were returned.'
+    : `${fixable.length} liabilit${fixable.length===1?'y has':'ies have'} ranked substitution proposals.`;
+  out.push(`<section class="card"><div class="verdict-row">
+    <span class="badge" style="background:var(--neutral-bg)">Screen complete</span>
+    <div><strong style="font-size:17px">${esc(headline)}</strong>
+    <p class="note" style="margin-top:6px">${esc(sites.length)} sites reviewed for substitution proposals, ${esc(cdrCount)} inside a CDR. The chemical-liability table below lists the full motif scan, including sites without a proposal.
+    ${foldId ? esc(structureSource==='experimental'?'Exposure calculated from supplied coordinates.':'Exposure calculated from a predicted structure.') : 'Structure-derived exposure unavailable.'}</p>
+    ${foldError ? `<p class="note" style="margin-top:8px;color:var(--mid)"><strong>${foldId ? 'Some summary results are unavailable.' : 'Exposure and antigen-contact columns are unavailable.'}</strong> ${esc(foldError)}${/hmmscan/i.test(foldError)?' HMMER is required for numbering inside the structure step \u2014 install it and restart, or run <code>python scripts/doctor.py</code> for platform-specific guidance.':''}</p>` : ''}
+    </div></div></section>`);
+
+  // A translation changes what was actually screened, so it is stated before
+  // any result rather than buried in a details block.
+  const translated = Object.entries(analysis.chains||{}).filter(([,c]) => c.translation);
+  if(translated.length){
+    out.push(`<section class="card" style="border-color:var(--mid)">
+      <strong>Translated from nucleotide sequence</strong>
+      ${translated.map(([label, c]) => `<p class="note" style="margin-top:8px">
+         <b>${esc(label)} chain:</b> ${esc(c.translation.note)}</p>
+         <div style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;word-break:break-all;
+                     background:var(--neutral-bg);padding:9px 11px;border-radius:7px;margin-top:6px">
+           ${esc(c.sequence)}</div>`).join('')}
+      <p class="note">${esc(translated[0][1].translation.caveat)}</p>
+    </section>`);
+  }
+
+  // The consolidated per-residue table is the headline output: one IMGT frame,
+  // every layer joined, one engineering call per position.
+  // Prefer the table rebuilt after folding: it carries exposure and predicted
+  // contact, which the analyze-time copy cannot have.
+  const residueTable = (fixes && fixes.residue_table && (fixes.residue_table.rows||[]).length)
+    ? fixes.residue_table : analysis.residue_table;
+  out.push(renderVerdict(categories, residueTable, analysis.molecule_flags));
+  // Chemistry and binding surface are different questions with different
+  // actions, so they get separate tables rather than one table and a filter.
+  out.push(renderLiabilityTable(residueTable, epitope));
+  if(foldId) out.push(sourceBanner(structureSource));
+  out.push(cite('ptm_priority'));
+  out.push(renderParatopeResidueTable(residueTable, epitope));
+
+  // The model belongs beside the residue evidence it illustrates, not at the
+  // bottom of the page behind a disclosure called "Go deeper".
+  out.push(`<h2>3D structure <span class="count">${
+      foldId ? (structureSource === 'experimental' ? 'supplied structure — rotate, colour by property' : 'predicted model — rotate, colour by property') : 'not available'}</span></h2>
+    <section class="card" id="viewer-host">
+      ${foldId ? `<div class="viewer-controls">
+          <div class="modes" id="viewer-modes">
+            <span class="modes-label">Colour</span>
+            <button data-mode="hydrophobic" aria-pressed="true">Hydrophobic</button>
+            <button data-mode="charge" aria-pressed="false">Charge</button>
+            <button data-mode="ptm" aria-pressed="false">Flagged sites</button>
+            <button data-mode="cdr" aria-pressed="false">CDRs</button>
+            <button data-mode="plain" aria-pressed="false">Plain</button>
+          </div>
+          <div class="modes" id="viewer-styles">
+            <span class="modes-label">Style</span>
+            <button data-style="cartoon" aria-pressed="false" title="Ribbon through the backbone, with side chains as thin sticks. Best for seeing the fold.">Cartoon</button>
+            <button data-style="spacefill" aria-pressed="false" title="Every atom at its van der Waals radius. Best for seeing what is actually on the surface.">Bubble</button>
+            <button data-style="surface" aria-pressed="true" title="Solvent-excluded molecular surface. Best for patches and grooves. Chosen automatically for the hydrophobic and charge maps, which are surface properties.">Surface</button>
+            <button data-style="ballstick" aria-pressed="false" title="Atoms and bonds. Best for inspecting one site closely.">Ball &amp; stick</button>
+            <button data-style="licorice" aria-pressed="false" title="All bonds as sticks, no ribbon.">Licorice</button>
+            <button data-style="backbone" aria-pressed="false" title="Backbone trace only. Fastest, least detail.">Backbone</button>
+          </div>
+        </div>
+        <div id="viewer"></div>
+        <div id="viewer-pick" class="pick"></div>
+        <div id="viewer-legend"></div>
+        <p class="note" id="viewer-note" role="status">${esc(structureViewerNote(structureSource))}</p>`
+        : '<p class="note" style="margin:0">Structure prediction did not run, so there is nothing to show here.</p>'}
+    </section>`);
+
+  out.push(renderMoleculeFlags(analysis.molecule_flags, patchRisk));
+  out.push(cite('biophysical'));
+  if((analysis.molecule_flags||{}).basis === 'full_length') out.push(cite('full_length_assembly'));
+  out.push(renderIngestion(ingestion));
+  out.push(renderEpitope(epitope));
+  out.push(renderEnsemble(structureAnalysis));
+  if(((structureAnalysis||{}).ensemble||{}).status === 'ok') out.push(cite('structure_ensemble'));
+  // Sequence-predicted surface surrogates are not presented as spatial evidence.
+  out.push(renderPatchRisk(patchRisk));
+  out.push(cite('surface_patches'));
+
+  // charge & aggregation, with a stated conclusion before the numbers
+  out.push('<h2>Panel comparison</h2>');
+  {
+    const n = (((Object.values(analysis.chains||{})[0]||{}).sequence_bands)||{});
+    const anyN = Object.values(n).map(b=>(b||{}).n).find(v=>v!=null);
+    out.push(`<div class="refbox">
+      <div class="refbox-h">Percentile against what</div>
+      <p><b>${anyN?esc(anyN)+' approved and Phase\u2011III antibodies':'the clinical reference panel'}</b>
+         with the same descriptor computed the same way. Green means the value falls between the
+         lowest and the highest member of that panel; amber means outside it.</p>
+      <p class="refbox-not"><b>A range, not a specification.</b> Approved drugs sit at the edges of
+         it, so outside is a reason to look rather than a failure \u2014 and the percentile is what
+         separates \u201csits with the bulk\u201d from \u201cinside the range but against the wall\u201d.
+         These are composition-based reference comparisons, not surface-patch measurements.</p>
+    </div>`);
+  }
+  const BAND_ORDER = ['isoelectric_point','net_charge_at_ph'];
+  const BAND_HINT = {isoelectric_point:'', net_charge_at_ph:'at pH 7.4',
+                     gravy:'mean hydropathy, whole chain',
+                     hydrophobic_windows:'sequence proxy'};
+  // A four-letter acronym with no expansion is not a label. Each tile gets
+  // the full name, what it is computed over, and which way is which.
+  const BAND_WHAT = {
+    isoelectric_point: 'Isoelectric point \u2014 the pH at which the chain carries no net charge. Computed from the amino-acid composition of this chain only.',
+    net_charge_at_ph: 'Net charge in elementary charges at pH 7.4, summed over the ionizable residues of this chain.',
+    gravy: 'GRAVY \u2014 Grand Average of Hydropathy: the mean Kyte-Doolittle hydropathy over every residue in the chain. Positive is net hydrophobic, negative net hydrophilic. Whole-chain, so it is dominated by the framework; the CDR-only version, which is the term associated with clearance, is under Molecule-level properties.',
+    hydrophobic_windows: 'Count of 7-residue windows with mean hydropathy \u2265 1.6 and at most one charged residue. A sequence stand-in for a hydrophobic surface patch, not a patch calculation.'
+  };
+  for(const [label, chain] of Object.entries(analysis.chains||{})){
+    const m = chain.metrics||{}, bands = chain.sequence_bands||{};
+    let cells = '';
+    for(const key of BAND_ORDER){
+      const b = bands[key]||{};
+      const state = b.state||'unknown';
+      // A percentile distinguishes 'sits with the bulk' from 'inside the range
+      // but against the wall', which 'typical' cannot. Only shown when the
+      // panel is big enough for the server to have computed one.
+      const pct = b.percentile;
+      const tail = pct != null && (pct >= 90 || pct <= 10);
+      const shown = state==='above' ? 'above panel'
+                  : state==='below' ? 'below panel'
+                  : state==='within' ? (pct==null ? 'typical'
+                      : tail ? `${pct}th pct — tail` : `${pct}th pct`)
+                  : 'no comparison';
+      const range = b.range ? `panel ${b.range.min} to ${b.range.max}, median ${b.range.median}`
+                           + (b.n ? ` (n=${b.n})` : '') : (b.basis||'');
+      cells += `<div class="cell b-${esc(state)}${tail&&state==='within'?' b-tail':''}" title="${
+            esc(BAND_WHAT[key]||'')}${BAND_WHAT[key]&&range?'\n\n':''}${esc(range)}">
+          <div class="k">${esc((b.label||key).replace('_',' '))}</div>
+          <div class="v">${esc(b.value==null?'–':b.value)}</div>
+          <div class="band">${esc(shown)}</div>
+          ${BAND_HINT[key]?`<div class="h">${esc(BAND_HINT[key])}</div>`:''}
+        </div>`;
+    }
+    cells += `<div class="cell"><div class="k">Human framework</div>
+        <div class="v">${esc((chain.humanness||{}).percent)}%</div>
+        <div class="h">closest V gene</div></div>`;
+    out.push(`<div style="margin-bottom:10px"><div style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:6px">${label==='H'?'Heavy chain':'Light chain'}</div>
+      <div class="grid">${cells}</div></div>`);
+  }
+
+  out.push(citeBlock(fixes,'biophysical'));
+
+  // paratope
+  const pd = fixes.paratope_detail;
+  if(pd && pd.status==='available'){
+    const s = pd.summary||{};
+    const byChain = Object.entries(s.likely_contact_imgt||{}).map(([c,v])=>`${c}: ${v.join(', ')}`).join(' · ');
+    out.push(`<h2>Predicted antigen contact surface</h2>
+      <section class="card"><p style="margin:0 0 8px"><strong>${esc(s.likely_contact_count)}</strong> of ${esc(s.scored_residues)} scored positions are likely contacts at the author-recommended cut-off of ${esc(pd.cutoff)}.</p>
+      <p class="note" style="margin:0"><strong>IMGT positions —</strong> ${esc(byChain)}</p>
+      <p class="note">Fixes at these positions are ranked last so an equivalent fix elsewhere is preferred. They are shown, not hidden.</p>
+      ${citeBlock(fixes,'paratope')}</section>`);
+  }
+
+  // liabilities + fixes
+  out.push(`<h2>Explore substitutions at a position</h2>`);
+  // The automatic proposals only cover detected liabilities. This answers the
+  // other question -- "what could go at this position instead" -- anywhere.
+  out.push(`<section class="card" id="position-lookup">
+    <strong>Rank substitutions at any position</strong>
+    <p class="note" style="margin:6px 0 10px">Select a residue, or enter its sequence or IMGT position. Rank alternative standard amino acids, then model the options you want to compare.</p>
+    <div class="row" style="align-items:flex-end;gap:10px">
+      <div><label for="pos-chain" style="margin-top:0">Chain</label>
+        <select id="pos-chain">${Object.keys(analysis.chains||{}).map(l=>
+          `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select></div>
+      <div><label for="pos-basis" style="margin-top:0">Numbering</label><select id="pos-basis"><option value="sequence">Sequence (1-based)</option><option value="imgt">IMGT</option></select></div>
+      <div><label for="pos-number" style="margin-top:0">Position</label>
+        <input id="pos-number" type="text" inputmode="text" style="width:110px"
+               placeholder="e.g. 99"></div>
+      <div><button class="primary" id="pos-run" type="button"
+             style="padding:9px 16px;font-size:14px">Rank substitutions</button></div>
+    </div>
+    <div id="pos-status" class="note" role="status" aria-live="polite"></div>
+    <div id="pos-results"></div>
+  </section>`);
+  if(!fixable.length){
+    out.push('<section class="card"><p style="margin:0">No automatic substitution proposals were returned. This does not clear the detected liabilities; review the chemical-liability table and experimental follow-up section.</p></section>');
+  } else {
+    out.push(renderFixWorkbench(fixable));
+  }
+
+  out.push(citeBlock(fixes,'ptm_priority'));
+  out.push(citeBlock(fixes,'framework_comparator'));
+  out.push(citeBlock(fixes,'substitutions'));
+  // Everything that used to live on a separate workbench page, folded in here
+  // so there is one view of this antibody rather than two that can disagree.
+  out.push(renderAllResiduesTable(residueTable, epitope));
+
+  out.push(renderShortlist(residueTable, analysis.molecule_flags, patchRisk, analysis.deepsp));
+
+  out.push('<h2>Go deeper</h2>');
+
+
+  const allSites = [];
+  for(const [label, chain] of Object.entries(fixes.chains||{}))
+    for(const s of chain.sites||[]) allSites.push({...s, chainLabel: label});
+  out.push(`<details class="tool"><summary>All flagged sites<small>${allSites.length} site${allSites.length===1?'':'s'}, including deferred and framework</small></summary>
+    <div class="tool-body"><table class="full"><thead><tr>
+      <th>Site</th><th>Region / IMGT</th><th>Chemistry</th><th>Exposure</th><th>Approved / Ph3</th><th>Proposals</th>
+    </tr></thead><tbody>${allSites.map(s=>{
+      const k=s.comparators||{};
+      const comp=!k.searched?'not searched':((k.approved||0)+(k.phase_iii||0))?`${k.approved} / ${k.phase_iii}`:'none';
+      const exp=s.exposure&&s.exposure.relative_sidechain_sasa!=null?`${Math.round(s.exposure.relative_sidechain_sasa*100)}%`:'–';
+      return `<tr><td><b>${esc(s.chainLabel)} ${esc((s.motif||'')[0]||'')}${esc(s.position)}</b></td>
+        <td>${esc(s.region||'')} · ${esc(String(s.imgt_number||'').replace(/^[HKL]/,''))}</td>
+        <td>${esc(s.kind||'')} ${esc(s.motif||'')}</td><td>${esc(exp)}</td><td>${esc(comp)}</td>
+        <td>${esc((s.proposals||[]).length)}</td></tr>`;}).join('')}</tbody></table></div></details>`);
+
+  out.push(`<details class="tool" id="tool-variants"><summary>Compare variants<small>run substitutions against this parent and see what moves</small></summary>
+    <div class="tool-body">
+      <p class="note" style="margin:0 0 10px">One substitution per line, as <code>H:W107F</code> or <code>name = H:W107F, L:D50E</code>. Use <b>Add to comparison</b> on a proposed substitution to add it here. Positions here use sequence numbering. Single substitutions are run before combinations, because stacking edits before testing each one confounds the readout.</p>
+      <label for="variant-input">Selected substitutions</label><textarea id="variant-input" spellcheck="false" placeholder="H:W107F&#10;L:D50E&#10;double = H:W107F, L:D50E"></textarea>
+      <div class="vrow" style="margin-top:10px">
+        <label><input type="checkbox" id="variant-structure" checked> Predict structure for each variant (slower, adds exposure and patch deltas)</label>
+        <div style="flex:1"></div>
+        <button class="primary" id="variant-run" style="padding:9px 16px;font-size:14px">Run comparison</button>
+      </div>
+      <div id="variant-status" class="note" role="status" aria-live="polite"></div>
+      <div id="variant-results"></div>
+    </div></details>`);
+
+  // Both PDFs are produced by the server on request. The one-page brief
+  // generator had existed for a while but was never reachable, and this
+  // panel told the reader to go and run the headless command line for a
+  // report the running app could already produce.
+  out.push(`<details class="tool" open><summary>Downloads<small>PDF, structure, raw data</small></summary>
+    <div class="tool-body"><div class="dl">
+      <a href="#" id="dl-brief"><b>Developability brief (1-page PDF)</b></a>
+      <a href="#" id="dl-report">Full report (5-page PDF)</a>
+      ${foldId?`<a href="/api/fold/${esc(foldId)}/pdb" download>${
+        structureSource==='experimental'?'Prepared structure':'Predicted structure'} (.pdb)</a>`:''}
+      <a href="#" id="dl-json">Analysis data (.json)</a>
+      <a href="#" id="dl-fixes">Substitution proposals (.json)</a>
+    </div>
+    <p class="note">The brief is the one-page summary: the verdict, the key numbers, the
+      flagged sites and what to measure next. The full report adds the evidence, the
+      per-residue table and the method citations behind every call.</p>
+    <p class="note" id="dl-status"></p></div></details>`);
+
+  out.push(`<details class="tool" id="tool-propermab"><summary>PROPERMAB descriptors<small>academic licence — off until eligibility is affirmed</small></summary>
+    <div class="tool-body" id="propermab-gate"><p class="note">Checking…</p></div></details>`);
+
+  out.push(`<details class="tool"><summary>Methods and sources<small>what produced each assessment</small></summary>
+    <div class="tool-body" id="methods-body"><p class="note">Loading…</p></div></details>`);
+
+  out.push(`<section class="card" style="margin-top:22px"><strong>Next</strong>
+    <p class="note" style="margin-top:6px">Confirm each liability analytically before engineering it: peptide mapping for deamidation and isomerization, forced degradation for oxidation. Then test the top one or two substitutions per site for binding and activity, one substitution at a time.</p></section>`);
+
+  resetStructureViewer();
+  if(window.AtlasEngineering) window.AtlasEngineering.reset();
+  $('#analysis-status').textContent = 'Analysis complete. Results are ready.';
+  $('#results').innerHTML = panelise(out);
+  $('#results').classList.remove('hidden');
+  if(window.AtlasWorkspace) window.AtlasWorkspace.mount($('#results'), {analysis,table:residueTable,isotype:$('#isotype').value});
+  wirePanels();
+  wireResidueTable();
+  wireResidueFocus();
+  wireFixWorkbench();
+  window.__atlasResidueTable = residueTable;
+  wirePositionLookup({heavy: analysis.chains && analysis.chains.H ? analysis.chains.H.sequence : '',
+                      light: analysis.chains && analysis.chains.L ? analysis.chains.L.sequence : '',
+                      scheme: analysis.scheme, ph: analysis.ph}, foldId);
+  wireTools(analysis, fixes, foldId, structureAnalysis, structureSource);
+  $('#results').focus({preventScroll:true});
+  $('#results').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth', block:'start'});
+}
+
+// The table opens filtered to rows worth attention. A full Fv is ~230 rows and
+// most of them are unremarkable, so showing everything by default would bury
+// the handful that matter.
+function repackCell(r){
+  if(!r) return '<span class="note" style="margin:0">ranked only</span>';
+  if(r.status !== 'ok') return `<span class="note" style="margin:0" title="${esc(r.reason||'')}">could not model</span>`;
+  const net = r.net > 0 ? `+${r.net}` : `${r.net}`;
+  // Net zero on a substitution that removes the wild-type side chain means a
+  // replacement bond formed. That is the case the sequence-level ranking
+  // cannot see, so it is the one worth making visible.
+  const cls = r.clashes_introduced > 0 ? 'v-evaluate' : r.net < 0 ? 'v-watch' : 'v-clear';
+  const clash = r.clashes_introduced > 0 ? ` \u00b7 ${esc(r.clashes_introduced)} clash` : '';
+  return `<span class="v ${cls}">${esc(net)}</span>
+    <span class="note" style="margin:0;display:block">\u2212${esc(r.hydrogen_bonds_lost)}
+    / +${esc(r.hydrogen_bonds_gained)}${clash}</span>`;
+}
+
+function renderRepackNote(rp, candidates){
+  if(!rp || !(rp.modelled||[]).length) return '';
+  const modelled = (candidates||[]).filter(c=>c.repack && c.repack.status==='ok');
+  const detail = modelled.map(c=>{
+    const d = c.repack.detail || {}, hb = d.hydrogen_bonds || {};
+    const lost = (hb.lost||[]).map(b=>`${esc(b.donor_resname)}${esc(b.donor_resseq)}
+        ${esc(b.donor_atom)} \u2192 ${esc(b.acceptor_resname)}${esc(b.acceptor_resseq)}
+        ${esc(b.acceptor_atom)} (${esc(b.distance_a)} \u00c5)`).join('<br>') || 'none';
+    const gained = (hb.gained||[]).map(b=>`${esc(b.donor_resname)}${esc(b.donor_resseq)}
+        ${esc(b.donor_atom)} \u2192 ${esc(b.acceptor_resname)}${esc(b.acceptor_resseq)}
+        ${esc(b.acceptor_atom)} (${esc(b.distance_a)} \u00c5)`).join('<br>') || 'none';
+    return `<div class="mf-row"><div></div><div>
+      <strong><code>${esc(c.mutation)}</code></strong>
+      <div class="mf-out" style="margin-top:4px"><b>Bonds lost</b><br>${lost}</div>
+      <div class="mf-out" style="margin-top:6px"><b>Bonds gained</b><br>${gained}</div>
+      <div class="mf-out" style="margin-top:6px">Protocol noise away from the site:
+        ${esc(c.repack.protocol_noise)} bond(s). ${esc((d.protocol_noise||{}).note||'')}</div>
+      <div class="mf-out" style="margin-top:6px">${esc(d.method||'')}</div>
+      <div class="mf-out" style="margin-top:6px">${esc(d.no_free_energy||'')}</div>
+    </div><div></div></div>`;
+  }).join('');
+  const measured = rp.source === 'experimental';
+  return `<div class="mf-tradeoff" style="margin-top:12px">
+      <strong>The top ${esc(rp.modelled.length)} were modelled, not inferred.</strong>
+      ${esc(rp.note)}
+      <div style="margin-top:6px">${measured
+        ? 'Geometry from your experimental structure.'
+        : '<b>Geometry from a predicted backbone</b>, where side-chain placement is the least reliable part. Triage, not evidence.'}</div>
+    </div>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px;color:var(--muted)">
+      Which bonds each modelled substitution breaks and forms</summary>
+      <div class="mf" style="margin-top:8px">${detail}</div>
+      <p class="note">A net of zero where the wild-type side chain was removed means a
+        replacement bond formed. Subtraction-based scoring cannot see that, which is why
+        it under-rates conservative swaps.</p>
+    </details>`;
+}
+
+// One lookup owns all updates, including manual previews and automatic models.
+let positionModelLookup = null;
+function positionModelCells(c){
+  const result=c.local_model, state=c.model_state||'unmodeled', h=result?.hydrogen_bonds, f=result?.free_energy;
+  const finite=v=>typeof v==='number'&&Number.isFinite(v);
+  const stateLabel={queued:'Queued · top five',modeling:'Modeling…',failed:'Model failed',unmodeled:'Not modeled'}[state]||'Not assessed';
+  const bonds=h&&finite(h.lost_at_site)&&finite(h.gained_at_site)
+    ? `<span>−${esc(h.lost_at_site)} / +${esc(h.gained_at_site)}</span><small style="display:block">${finite(h.retained_at_site)?esc(h.retained_at_site)+' retained':'Retained not assessed'} · ${finite(result.clashes?.introduced)?esc(result.clashes.introduced)+' clash count increase':'Clashes not assessed'}</small>`
+    : `<span title="${esc(c.model_error||'')}">${esc(state==='complete'?'H-bonds not assessed':stateLabel)}</span>`;
+  const energy=f?.status==='available'&&finite(f.value_kcal_mol)
+    ? `<span title="${esc((f.method||'')+' · '+(f.sign_convention||'Positive: destabilizing; negative: stabilizing'))}">${f.value_kcal_mol>0?'+':''}${f.value_kcal_mol.toFixed(2)}</span><small style="display:block">${esc(f.method||'Predicted')}</small>`
+    : `<span title="${esc(f?.reason||c.model_error||'A dedicated stability model is required.')}">${state==='complete'?(f?.status==='failed'?'Calculation failed':'Not calculated'):esc(stateLabel)}</span>`;
+  return {bonds,energy};
+}
+function updatePositionModel(detail){
+  const active=positionModelLookup;
+  if(!active||active.generation!==viewerGeneration||active.foldId!==detail.foldId||active.chain!==detail.chain||active.position!==Number(detail.position)||active.ph!==Number(detail.ph))return;
+  const c=active.data?.candidates?.find(c=>(c.replacement_aa||c.mutation.slice(-1))===detail.to);
+  if(!c)return;
+  c.model_state=detail.state;c.local_model=detail.result;c.model_error=detail.error;
+  const row=document.getElementById('pos-results')?.querySelector(`[data-position-candidate="${detail.to}"]`);
+  if(!row)return;
+  const cells=positionModelCells(c);
+  row.querySelector('[data-model-bonds]').innerHTML=cells.bonds;
+  row.querySelector('[data-model-energy]').innerHTML=cells.energy;
+  const button=row.querySelector('.preview-local');
+  if(button)button.textContent=detail.state==='complete'?'View local model':detail.state==='modeling'?'Open when ready':'Model / view structure';
+}
+window.addEventListener('atlas:local-model',event=>updatePositionModel(event.detail));
+function renderPositionResult(d){
+  if(d.error) return `<p class="note" style="color:var(--high)">${esc(d.error)}</p>`;
+  const contact = d.paratope && d.paratope.probability != null
+    ? `${(d.paratope.probability*100).toFixed(0)}% predicted antigen contact` : 'no contact prediction';
+  const exposure = d.exposure && d.exposure.relative_sidechain_sasa != null
+    ? `${Math.round(d.exposure.relative_sidechain_sasa*100)}% exposed` : 'exposure not assessed';
+  const liab = (d.existing_liabilities||[]).length
+    ? (d.existing_liabilities||[]).map(l=>`${esc(l.kind)} (${esc(l.motif)})`).join('; ')
+    : 'none detected here';
+  const rows = (d.candidates||[]).map(c=>{
+    const g = c.germline_precedent||{}, cl = c.clinical_precedent||{}, selection=c.selection_score||{};
+    const made = (c.introduces||[]).map(i=>`${esc(i.kind)} at ${esc(i.position)}`).join('; ');
+    const dd = c.developability_delta||{};
+    const flags = (dd.flags||[]).slice(0,2).map(f=>esc(f.text||f)).join(' ');
+    const cells=positionModelCells(c);
+    return `<tr data-position-candidate="${esc(c.replacement_aa||c.mutation.slice(-1))}">
+      <td><code>${esc(c.mutation)}</code><br><button type="button" class="addfix" data-fix="${esc(d.chain)}:${esc(c.mutation)}">Add to comparison</button><button type="button" class="preview-local" data-chain="${esc(d.chain)}" data-position="${esc(d.position)}" data-to="${esc(c.mutation.slice(-1))}">Model / view structure</button></td>
+      <td title="${esc(selection.reason||'Selection score unavailable')}">${typeof selection.score==='number'?selection.score.toFixed(2):'—'}${selection.basis==='similarity_only'?'<small style="display:block">Similarity only</small>':''}</td>
+      <td data-model-energy>${cells.energy}</td><td data-model-bonds>${cells.bonds}</td>
+      <td title="Evolutionary and physicochemical amino-acid similarity; not a prediction of fold preservation.">${c.conservativeness ? c.conservativeness.score.toFixed(2) : '—'}</td>
+      <td>${g.percent==null?'—':esc(g.percent)+'%'}</td>
+      <td title="${esc(cl.observed==null?'No reference coverage':cl.observed+' / '+cl.total+' chain records at the same IMGT position; snapshot '+(cl.snapshot||'not recorded')+'. Not proof this substitution succeeds in your antibody.')}">${cl.percent==null?'Not available':esc(cl.percent)+'%<small style="display:block">'+esc(cl.observed)+' / '+esc(cl.total)+'</small>'}</td>
+      <td>${c.clean ? '<span class="v v-clear">no new screened motif</span>'
+                    : `<span class="v v-watch">creates ${esc(made)}</span>`}</td>
+      <td style="font-size:12px;color:var(--muted)">${flags||'—'}</td>
+      </tr>`;
+  }).join('');
+  return `<div style="margin-top:12px">
+    <p style="margin:0 0 8px"><strong>${esc(d.chain)} ${esc(d.original_aa)}${esc(d.position)}</strong>
+      (IMGT ${esc(d.imgt_number||'—')}, ${esc(d.region||'—')}) · ${esc(exposure)} · ${esc(contact)}
+      <br><span class="note">Existing liability: ${esc(liab)}</span></p>
+    <p class="note">Top five selection combines 50% residue similarity and 50% clinical reference frequency when available; missing clinical coverage uses similarity alone. New screened motifs are ranked after clean candidates. This shortlist score does not measure fold preservation. Structural results do not change the ranking.</p>
+    <p class="note" id="pos-model-status" role="status" aria-live="polite"></p>
+    <div class="rt-wrap" role="region" aria-label="Ranked substitutions and modeled effects" tabindex="0"><table class="rt position-table"><colgroup><col style="width:17%"><col style="width:7%"><col style="width:11%"><col style="width:10%"><col style="width:8%"><col style="width:7%"><col style="width:11%"><col style="width:12%"><col style="width:17%"></colgroup><thead><tr>
+      <th>Substitution</th><th>Selection score</th><th>Predicted folding ΔΔG<br><small>kcal/mol</small></th><th>H-bonds lost / gained</th><th>Residue similarity</th><th>Germline</th><th>Clinical reference frequency</th>
+      <th>Rescan</th><th>Developability</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="note">${esc(d.basis)} ${esc(d.caveat)}</p>
+    <p class="note">Showing ${esc((d.candidates||[]).length)} of ${esc(d.candidate_count)} ranked substitutions. With a matched parent structure, the top five receive local side-chain models automatically; model any other candidate with its button. These are locally relaxed models, not independently predicted folds. Positive ΔΔG predicts destabilization; negative predicts stabilization. Missing calculations stay explicit and do not count as zero. View a model for method details and limitations.</p>
+  </div>`;
+}
+async function modelPositionTopFive(active){
+  const valid=()=>positionModelLookup===active&&active.generation===viewerGeneration;
+  const label=text=>{if(valid()){const el=document.getElementById('pos-model-status');if(el)el.textContent=text;}};
+  if(!active.foldId){label('Automatic models unavailable: predict or upload a matched parent structure first. All candidates remain available for later modeling.');return;}
+  if(!window.AtlasEngineering?.modelLocal){label('Modeling workspace could not load. Refresh to try again.');return;}
+  const selected=new Set(active.data.top_model_candidates||(active.data.candidates||[]).slice(0,5).map(c=>c.variant_spec||`${active.chain}:${c.mutation}`));
+  const candidates=(active.data.candidates||[]).filter(c=>selected.has(c.variant_spec||`${active.chain}:${c.mutation}`)).slice(0,5);
+  for(const c of candidates)updatePositionModel({...active,to:c.replacement_aa||c.mutation.slice(-1),state:'queued'});
+  let completed=0,failed=0;
+  for(const c of candidates){
+    if(!valid())return;
+    label(`Modeling top five: ${completed+failed+1} of ${candidates.length} · ${c.mutation}. You can inspect completed models or select another position.`);
+    try{await window.AtlasEngineering.modelLocal({chain:active.chain,position:active.position,to:c.replacement_aa||c.mutation.slice(-1),foldId:active.foldId,ph:active.ph});completed++;}
+    catch(error){failed++;}
+  }
+  label(`Local models: ${completed} completed${failed?`, ${failed} failed`:''}. ΔΔG availability is shown separately in each row; unavailable does not mean stable. Other substitutions can still be modeled individually.`);
+}
+function wirePositionLookup(payload, foldId){
+  const run = document.getElementById('pos-run');
+  if(!run) return;
+  const status = document.getElementById('pos-status');
+  const results = document.getElementById('pos-results');
+  run.onclick = async () => {
+    const chain = document.getElementById('pos-chain').value;
+    let position;
+    try{ position=window.AtlasWorkspace.positionFor({chains:{H:{sequence:payload.heavy},L:{sequence:payload.light}},residue_table:window.__atlasResidueTable},chain,document.getElementById('pos-number').value,document.getElementById('pos-basis').value); }catch(e){status.textContent=e.message;return;}
+    window.AtlasWorkspace.selectPosition(chain,position,false);
+    const active={generation:viewerGeneration,chain,position,foldId,ph:Number(payload.ph??7.4)};
+    positionModelLookup=active;
+    run.disabled = true; status.textContent = 'Ranking all 19 substitutions…'; results.innerHTML = '';
+    try{
+      const d = await api('/api/substitutions/position',
+        {...payload, chain, position, fold_job_id: foldId, max_candidates: 19, repack_top: 0});
+      if(active!==positionModelLookup||active.generation!==viewerGeneration)return;
+      active.data=d;
+      status.textContent = '';
+      results.innerHTML = renderPositionResult(d)
+        + citeBlock({citations: {substitutions: d.citation}}, 'substitutions');
+      run.disabled=false;
+      if(!d.error)await modelPositionTopFive(active);
+    }catch(e){
+      if(active===positionModelLookup&&active.generation===viewerGeneration)status.textContent = e.message || String(e);
+    }finally{if(active===positionModelLookup)run.disabled = false;}
+  };
+}
+
+// Clicking a row focuses that residue in the model, so the tables and the
+// picture are two views of one thing. Inert until a structure has been
+// drawn: focusing nothing would look like a broken control.
+function wireResidueFocus(){
+  document.querySelectorAll('table.rt tbody').forEach(body => {
+    body.querySelectorAll('tr[data-resno]').forEach(tr => {
+      const cell = tr.querySelector('td');
+      if(!cell || cell.querySelector('button')) return;
+      const label = cell.textContent;
+      cell.innerHTML = `<button type="button" class="link" aria-label="Focus ${esc(tr.dataset.chain)} residue ${esc(tr.dataset.resno)} in structure">${esc(label)}</button>`;
+    });
+    body.addEventListener('click', event => {
+      const tr = event.target.closest('tr[data-resno]');
+      if(!tr) return;
+      if(window.AtlasWorkspace) window.AtlasWorkspace.selectPosition(tr.dataset.chain,Number(tr.dataset.resno));
+      document.querySelectorAll('tr.rt-focused').forEach(x => x.classList.remove('rt-focused'));
+      tr.classList.add('rt-focused');
+      const panel = (document.getElementById('viewer-host') || {}).closest
+        ? document.getElementById('viewer-host').closest('details') : null;
+      if(panel && !panel.open) panel.open = true;
+      focusResidue({chain: tr.dataset.chain, resno: Number(tr.dataset.resno),
+                    aa: tr.dataset.aa,
+                    note: (tr.querySelector('td.liab') || {}).textContent || ''});
+    });
+  });
+}
+
+function wireResidueTable(){
+  // There are now several .rt tables on the page and only the all-residues
+  // one carries a filter bar. Each bar drives the table inside its own
+  // section: a document-wide selector here is what previously emptied the
+  // structure-ingestion and epitope tables, which reuse the class for
+  // styling and carry no filter attributes at all.
+  document.querySelectorAll('.rt-bar').forEach(bar => {
+    const owner = bar.closest('section') || document;
+    const apply = mode => {
+      owner.querySelectorAll('table.rt tbody tr').forEach(tr => {
+        const show = mode === 'all' ? true
+          : mode === 'gl-fr'   ? tr.dataset.gl === 'mismatch_framework'
+          : mode === 'gl-cdr'  ? tr.dataset.gl === 'mismatch_cdr'
+          : mode === 'liab'    ? tr.dataset.liab === '1'
+          : mode === 'contact' ? (tr.dataset.contact === '1' && tr.dataset.liab !== '1')
+          : tr.dataset.notable === '1';
+        tr.style.display = show ? '' : 'none';
+      });
+      bar.querySelectorAll('.rt-filter').forEach(b =>
+        b.setAttribute('aria-pressed', String(b.dataset.f === mode)));
+    };
+    bar.addEventListener('click', e => {
+      const button = e.target.closest('.rt-filter');
+      if(button) apply(button.dataset.f);
+    });
+    const pressed = bar.querySelector('.rt-filter[aria-pressed="true"]');
+    apply(pressed ? pressed.dataset.f : 'all');
+  });
+}
+
+// ---- panel screening -----------------------------------------------------
+const BATCH_COLUMNS = [
+  ['name','Molecule'], ['residues_notable','Notable'], ['residues_fix','Evaluate'],
+  ['residues_watch','Watch'], ['cdr_liabilities','CDR motif sites'],
+  ['framework_liabilities','FR motif sites'], ['germline_fr_mismatches','FR \u2260 germline'],
+  ['pI','pI'], ['net_charge','Net charge'],
+  ['colloidal_ph_margin','Colloidal'],
+  ['humanness_H','Human H'], ['humanness_L','Human L'],
+];
+
+function renderBatchRows(job){
+  const rows = [...(job.rows||[])];
+  if(job.uiSort){ const {key, direction} = job.uiSort;
+    rows.sort((a,b) => {
+      if(a[key] == null) return b[key] == null ? 0 : 1;
+      if(b[key] == null) return -1;
+      const x=a[key], y=b[key];
+      return direction * (typeof x === 'number' && typeof y === 'number' ? x-y : String(x).localeCompare(String(y), undefined, {numeric:true}));
+    });
+  }
+  if(!rows.length) return '';
+  // Only show columns that at least one row actually has a value for.
+  const cols = BATCH_COLUMNS.filter(([k]) => rows.some(r => r[k] != null));
+  const seen = new Set(); const unique = cols.filter(([k,l]) => {
+    const id = k+'|'+l; if(seen.has(id)) return false; seen.add(id); return true; });
+  const verdictCell = v => ['green','amber','red','unknown'].includes(v)
+    ? `<span class="v v-${v==='green'?'clear':v==='red'?'evaluate':v==='unknown'?'preserve':'watch'}">${esc(v)}</span>` : esc(v);
+  // The batch is a triage pass. Every row is a way into the molecule: the
+  // name opens it in the full single-molecule screen, the checkbox selects it
+  // for a report.
+  const body = rows.map(r => `<tr>
+      <td><input type="checkbox" class="batch-pick" value="${esc(r.name)}" aria-label="Select ${esc(r.name)}"></td>
+      ${unique.map(([k], i) => i === 0
+        ? `<td><button type="button" class="link batch-open" data-name="${esc(r.name)}"
+             title="Open this molecule in the full screen">${esc(r.name)}</button></td>`
+        : `<td>${r[k]==null ? '\u2014' : verdictCell(r[k])}</td>`).join('')}
+    </tr>`).join('');
+  const failed = (job.results||[]).filter(x=>x.status==='failed');
+  return `<div class="rt-wrap" style="margin-top:12px"><table class="rt"><thead><tr>
+      <th><input type="checkbox" id="batch-pick-all" title="Select all"></th>
+      ${unique.map(([k,l])=>`<th aria-sort="${job.uiSort?.key===k?(job.uiSort.direction===1?'ascending':'descending'):'none'}"><button type="button" class="link batch-sort" data-key="${esc(k)}">${esc(l)}</button></th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
+    ${job.status==='complete' ? `<div class="row" style="gap:10px;margin-top:10px;align-items:center">
+      <button class="ghost" id="batch-reports" type="button">Download reports for selected</button>
+      <span class="note" id="batch-pick-count" style="margin:0">none selected</span>
+    </div>` : ''}
+    ${failed.length ? `<p class="note" style="color:var(--high)">${failed.length} failed: ${
+      failed.map(f=>`<b>${esc(f.name)}</b> ${esc(f.error||'')}`).join(' · ')}</p>` : ''}
+    ${(job.warnings||[]).length ? `<p class="note">${job.warnings.map(w=>esc(
+      typeof w === 'string' ? w : (w.detail||JSON.stringify(w)))).join(' · ')}</p>` : ''}
+    ${job.status==='complete' ? `<p class="dl" style="margin-top:12px">
+      <a href="/api/batch/${esc(job.id)}/csv" download>Download all columns (.csv)</a></p>` : ''}`;
+}
+
+function wireBatchRowActions(job){
+  const results = document.getElementById('batch-results');
+  if(!results) return;
+  const picks = () => [...results.querySelectorAll('.batch-pick:checked')].map(b => b.value);
+  results.querySelectorAll('.batch-sort').forEach(button => button.onclick = () => {
+    const selected = new Set(picks());
+    const key = button.dataset.key;
+    job.uiSort = {key, direction:job.uiSort?.key===key ? -job.uiSort.direction : 1};
+    results.innerHTML = renderBatchRows(job);
+    results.querySelectorAll('.batch-pick').forEach(b => b.checked = selected.has(b.value));
+    wireBatchRowActions(job);
+    results.querySelector(`.batch-sort[data-key="${key}"]`)?.focus();
+  });
+  const count = document.getElementById('batch-pick-count');
+  const refresh = () => { if(count){ const n = picks().length;
+    count.textContent = n ? `${n} selected` : 'none selected'; } };
+
+  const all = document.getElementById('batch-pick-all');
+  if(all) all.onchange = () => {
+    results.querySelectorAll('.batch-pick').forEach(b => { b.checked = all.checked; });
+    refresh();
+  };
+  results.querySelectorAll('.batch-pick').forEach(b => b.addEventListener('change', refresh));
+
+  // Promote one row to the full screen: fill the inputs and run, so the user
+  // lands on the per-residue table, structure and fixes for that molecule.
+  results.querySelectorAll('.batch-open').forEach(button => button.onclick = async () => {
+    const name = button.dataset.name;
+    if($('#run').disabled){ $('#batch-status').textContent = 'Wait for the current single-antibody screen to finish before opening another molecule.'; return; }
+    button.disabled = true;
+    try{
+      const d = await api(`/api/batch/${job.id}/sequences/${encodeURIComponent(name)}`);
+      if($('#run').disabled){ $('#batch-status').textContent = 'Another antibody screen started. Open this molecule after it finishes.'; return; }
+      $('#heavy').value = d.chains.H || '';
+      $('#light').value = d.chains.L || '';
+      $('#structure-file').value = '';
+      const options = job.options || {};
+      $('#scheme').value = options.scheme || 'imgt';
+      $('#ph').value = options.ph ?? 7.4;
+      $('#isotype').value = options.isotype || '';
+      $('#models').value = '1';
+      const panel = document.getElementById('batch-panel');
+      if(panel) panel.open = false;
+      $('#input-card').scrollIntoView({behavior:'smooth', block:'start'});
+      $('#run').click();
+    }catch(e){
+      const status = document.getElementById('batch-status');
+      if(status) status.textContent = e.message || String(e);
+    }finally{ button.disabled = false; }
+  });
+
+  const reports = document.getElementById('batch-reports');
+  if(reports) reports.onclick = () => {
+    const names = picks();
+    if(!names.length){ if(count) count.textContent = 'select at least one molecule first'; return; }
+    // One selection is a PDF; several are a zip. Both are plain downloads.
+    window.location = names.length === 1
+      ? `/api/batch/${job.id}/report/${encodeURIComponent(names[0])}`
+      : `/api/batch/${job.id}/reports?names=${names.map(encodeURIComponent).join(',')}`;
+  };
+  refresh();
+}
+
+function wireBatch(){
+  const run = document.getElementById('batch-run');
+  if(!run) return;
+  const status = document.getElementById('batch-status');
+  const results = document.getElementById('batch-results');
+  const example = document.getElementById('batch-example');
+  if(example) example.onclick = () => {
+    document.getElementById('batch-input').value =
+      '>MAB01|H\nEVQLVESGGGLVQPGGSLRLSCAASGFNIKDTYIHWVRQAPGKGLEWVARIYPTNGYTRYADSVKGRFTISADTSKNTAYLQMNSLRAEDTAVYYCSRWGGDGFYAMDYWGQGTLVTVSS\n'
+    + '>MAB01|L\nDIQMTQSPSSLSASVGDRVTITCRASQDVNTAVAWYQQKPGKAPKLLIYSASFLYSGVPSRFSGSRSGTDFTLTISSLQPEDFATYYCQQHYTTPPTFGQGTKVEIK\n'
+    + '>MAB02|H\nQVQLVQSGAEVKKPGASVKVSCKASGYTFTSYGISWVRQAPGQGLEWMGWISAYNGNTNYAQKLQGRVTMTTDTSTSTAYMELRSLRSDDTAVYYCARDYYGSNSLDYWGQGTLVTVSS\n'
+    + '>MAB02|L\nDIQMTQSPSSLSASVGDRVTITCRASQGISSYLAWYQQKPGKAPKLLIYAASTLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYYCQQYYSTPPTFGQGTKVEIK\n';
+  };
+  run.onclick = async () => {
+    const panel = document.getElementById('batch-input').value.trim();
+    if(!panel){ status.textContent = 'Paste a panel first.'; return; }
+    let ph; try{ ph = inputPH(); }catch(e){ status.textContent = e.message; return; }
+    run.disabled = true; results.innerHTML = ''; status.textContent = 'Starting…';
+    try{
+      let job = await api('/api/batch', {
+        panel,
+        isotype: document.getElementById('batch-isotype').value || null,
+        precedents: document.getElementById('batch-precedents').checked,
+        scheme: $('#scheme').value, ph});
+      // Poll. The first molecule on a cold server pays the import and
+      // reference-data cost, so the early estimate is pessimistic.
+      while(job.status === 'running'){
+        status.textContent = `Screening ${job.done}/${job.total}`
+          + (job.current ? ` — ${job.current}` : '') + '…';
+        if((job.rows||[]).length){ results.innerHTML = renderBatchRows(job);
+                                   wireBatchRowActions(job); }
+        await new Promise(r => setTimeout(r, 1200));
+        job = await api(`/api/batch/${job.id}`);
+      }
+      const failed = (job.results||[]).filter(x=>x.status==='failed').length;
+      status.textContent = `${job.total - failed} of ${job.total} screened in ${job.seconds}s.`
+        + (failed ? ` ${failed} failed.` : '');
+      results.innerHTML = renderBatchRows(job);
+      wireBatchRowActions(job);
+      const hint = document.getElementById('batch-hint');
+      if(hint) hint.style.display = '';
+    }catch(e){
+      status.textContent = e.message || String(e);
+    }finally{ run.disabled = false; }
+  };
+}
+
+// ---- the folded-in tools -------------------------------------------------
+const HYDROPATHY = {A:1.8,C:2.5,D:-3.5,E:-3.5,F:2.8,G:-0.4,H:-3.2,I:4.5,K:-3.9,L:3.8,
+                    M:1.9,N:-3.5,P:-1.6,Q:-3.5,R:-4.5,S:-0.8,T:-0.7,V:4.2,W:-0.9,Y:-1.3};
+const CHARGED = {D:-1,E:-1,K:1,R:1,H:0.1};
+let nglLoaded = null, stage = null, viewerGeneration = 0;
+let viewerColour = null, viewerWaitCancel = null;
+let viewerCleanups = [];
+let viewerResidues = [];
+function resetStructureViewer(){
+  viewerCleanups.splice(0).forEach(fn=>fn());
+  viewerGeneration++;
+  if(viewerWaitCancel) viewerWaitCancel();
+  if(stage){ stage.removeAllComponents(); stage.dispose(); }
+  if(viewerColour && window.NGL) NGL.ColormakerRegistry.removeScheme(viewerColour);
+  viewerColour = null;
+  stage = null;
+  viewerResidues = [];
+  window.__atlasFocus = null;
+}
+window.addEventListener('resize', () => stage && stage.handleResize());
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+  const theme = document.documentElement.dataset.theme;
+  if(stage) stage.setParameters({backgroundColor:(theme === 'dark' || (theme !== 'light' && event.matches)) ? '#15171a' : '#f4f6f6'});
+});
+function structureViewerNote(source){
+  return (source === 'experimental'
+    ? 'Coordinates from the supplied structure. Geometry is calculated from these coordinates; experimental quality and missing residues still matter. '
+    : 'Predicted coordinates, not an experimental structure. CDR-H3 and side-chain placement are the least reliable parts. ')
+    + 'Drag to rotate, scroll to zoom. Use a residue-table focus button to inspect a site.';
+}
+
+
+function loadNGL(){
+  if(nglLoaded) return nglLoaded;
+  nglLoaded = new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='/static/vendor/ngl/ngl.js'; s.onload=resolve;
+    s.onerror=()=>{ nglLoaded=null; s.remove(); reject(new Error('Could not load the 3D viewer. Choose a display mode to retry.')); };
+    document.head.appendChild(s);
+  });
+  return nglLoaded;
+}
+
+const PICK_HINT = 'Click any residue in the model to read its position, exposure and flags here.';
+
+// Focus one residue in the model: used when a table row is clicked, so the
+// tables and the picture are two views of one thing rather than two lists
+// the reader has to reconcile by eye.
+function focusResidue(target){
+  window.__atlasFocus = target;
+  if(window.AtlasWorkspace) window.AtlasWorkspace.selectPosition(target.chain,Number(target.resno),false);
+  if(!stage) return;
+  const component = stage.compList && stage.compList[0];
+  if(!component) return;
+  const mapped=viewerResidues.find(r=>r.chain===target.chain && Number(r.sequence_position)===Number(target.resno));
+  const coordinate=mapped?.pdb_number;
+  if(coordinate==null)return;
+  const parts=/^(-?\d+)([A-Za-z]?)$/.exec(String(coordinate));if(!parts)return;
+  const sele = `${parts[1]}${parts[2]?'^'+parts[2]:''}:${target.chain}`;
+  // A stable name so repeated focuses replace rather than accumulate.
+  (component.reprList || []).slice().forEach(r => {
+    if(r.name === 'atlas-focus') component.removeRepresentation(r);
+  });
+  const repr = component.addRepresentation('ball+stick',
+    {sele, color:'#d64354', radiusScale:1.6, aspectRatio:1.4,name:'atlas-focus'});
+  component.autoView(sele, 700);
+  const box = document.getElementById('viewer-pick');
+  if(box) box.innerHTML = `<b>${esc(target.chain)} ${esc(target.aa||'')}${esc(target.resno)}</b> `
+    + `focused from the table${target.note ? ' \u00b7 ' + esc(target.note) : ''}`;
+}
+
+function residueIndex(structureAnalysis){
+  // chain:resno -> {aa, region, rsa, flagged}
+  const index = new Map();
+  for(const r of (structureAnalysis&&structureAnalysis.residues)||[]){
+    const n = String(r.number||'').replace(/^[HKL]/,'');
+    if(r.pdb_number==null)continue;
+    index.set(`${r.chain}:${r.pdb_number}`, {
+      aa:r.aa, region:r.region, rsa:r.relative_sidechain_sasa, imgt:n,sequence_position:r.sequence_position});
+  }
+  for(const s of (structureAnalysis&&structureAnalysis.ptm_sites)||[]){
+    const residue=(structureAnalysis.residues||[]).find(r=>r.chain===s.chain && r.sequence_position===s.sequence_position);
+    const e=residue && index.get(`${residue.chain}:${residue.pdb_number}`); if(e) e.flagged=s.priority||'review';
+  }
+  return index;
+}
+
+// ---- viewer colour scales ------------------------------------------------
+// Declared once because the legend and the colours have to come from the
+// same numbers. A key that drifts from what is on screen is worse than no
+// key: it is a wrong answer the reader cannot check.
+//
+// Both continuous scales are EXPOSURE-WEIGHTED. A buried isoleucine is not a
+// hydrophobic surface, and colouring it as one is what makes a cartoon look
+// alarming while the actual solvent-accessible surface is mild. That is the
+// single most important thing the key has to say.
+// Deliberately outside every ramp: a colour that cannot be mistaken for a
+// position on one.
+const NOT_ASSESSED = 0x9aa0a6;
+const NOT_ASSESSED_HEX = '#9aa0a6';
+
+const HYDRO_SCALE = {
+  title: 'Exposed hydrophobicity',
+  formula: 'Kyte-Doolittle hydropathy (clipped at 0) \u00f7 4.5, multiplied by relative side-chain exposure. 1.0 would be a fully exposed isoleucine.',
+  bands: [
+    {above: 0.45, hex: '#b91f43', label: 'strongly exposed hydrophobic'},
+    {above: 0.28, hex: '#ee9856', label: 'moderately exposed'},
+    {above: 0.14, hex: '#e7d779', label: 'weakly exposed'},
+    {above: null, hex: '#3f7fa6', label: 'buried or hydrophilic'},
+  ]};
+const CHARGE_SCALE = {
+  title: 'Exposed charge',
+  formula: 'Formal side-chain charge multiplied by relative exposure (floored at 0.05 so a buried charge is not erased entirely).',
+  bands: [
+    {above: 0.12,  hex: '#1f6f9a', label: 'exposed positive'},
+    {above: -0.12, hex: '#dfe6e8', label: 'near neutral'},
+    {above: null,  hex: '#b91f43', label: 'exposed negative'},
+  ]};
+const DISCRETE_SCALES = {
+  ptm: {title: 'Flagged sites', formula: 'Positions carrying a chemical liability, coloured by this screen\u2019s priority.',
+        bands: [{hex:'#a8505b', label:'high priority'}, {hex:'#d8a13f', label:'flagged, lower priority'},
+                {hex:'#c3ced4', label:'no liability detected'}]},
+  cdr: {title: 'CDRs', formula: 'IMGT CDR1\u20133 against framework.',
+        bands: [{hex:'#d64354', label:'CDR'}, {hex:'#bfcdd4', label:'framework'}]},
+  plain: {title: 'Chains', formula: 'No property mapped.',
+          bands: [{hex:'#4a7fa5', label:'heavy'}, {hex:'#8fb8c9', label:'light'}]},
+};
+
+function hydroScore(aa, rsa){ return Math.max(0, (HYDROPATHY[aa]||0)) / 4.5 * rsa; }
+function chargeScore(aa, rsa){ return (CHARGED[aa]||0) * Math.max(rsa, 0.05); }
+
+function bandColour(scale, value){
+  for(const band of scale.bands)
+    if(band.above === null || value > band.above) return parseInt(band.hex.slice(1), 16);
+  return parseInt(scale.bands[scale.bands.length-1].hex.slice(1), 16);
+}
+
+function viewerLegend(mode, unassessed){
+  const scale = mode === 'charge' ? CHARGE_SCALE
+              : DISCRETE_SCALES[mode] || HYDRO_SCALE;
+  const continuous = scale === HYDRO_SCALE || scale === CHARGE_SCALE;
+  const swatches = scale.bands.map(b => {
+    const cut = !continuous ? ''
+      : b.above === null ? `\u2264 ${scale.bands[scale.bands.length-2].above}`
+      : `&gt; ${b.above}`;
+    return `<span class="lg-item"><span class="lg-dot" style="background:${esc(b.hex)}"></span>${
+      esc(b.label)}${cut?` <span class="lg-cut">${cut}</span>`:''}</span>`;
+  }).join('');
+  return `<div class="lg">
+    <div class="lg-ramp">${scale.bands.map(b=>
+      `<span style="background:${esc(b.hex)}"></span>`).join('')}</div>
+    <div><div class="lg-title">${esc(scale.title)}</div>
+      <div class="lg-items">${swatches}</div>
+      ${mode==='plain' ? '' : `<div class="lg-items" style="margin-top:3px">
+        <span class="lg-item"><span class="lg-dot" style="background:${NOT_ASSESSED_HEX}"></span>not assessed${
+          unassessed ? ` <span class="lg-cut">${esc(unassessed)} atom${unassessed===1?'':'s'}</span>` : ''}</span></div>`}
+      <div class="lg-note">${esc(scale.formula)}${continuous
+        ? (mode === 'charge' ? ' This is an exposure-weighted charge proxy, not an electrostatic potential map.' : ' Colour is a property of the <b>surface</b>, not of the residue type: a buried hydrophobe stays cool.')
+        : ''} Grey means the analysis did not reach that residue \u2014 it is not a low value.</div></div>
+  </div>`;
+}
+
+function countUnassessedAtoms(structure, index, mode){
+  if(mode === 'plain' || !structure?.eachAtom) return 0;
+  let count = 0;
+  structure.eachAtom(atom => {
+    const e = index.get(`${atom.chainname}:${atom.resno}${atom.inscode||''}`);
+    if(!e || ((mode === 'charge' || mode === 'hydrophobic') &&
+       !Number.isFinite(e.rsa) && e.aa !== 'G')) count++;
+  });
+  return count;
+}
+
+async function showStructure(foldId, structureAnalysis, mode, style, keepView){
+  const host = document.getElementById('viewer');
+  if(!host) return;
+  const generation = viewerGeneration;
+  await loadNGL();
+  if(generation !== viewerGeneration || host !== document.getElementById('viewer')) return;
+  if(!stage){
+    // NGL paints 'transparent' as black, which ignores the page theme, so the
+    // background is set explicitly and kept in step with the colour scheme.
+    const dark = () => document.documentElement.dataset.theme === 'dark' ||
+      (document.documentElement.dataset.theme !== 'light' &&
+       window.matchMedia('(prefers-color-scheme: dark)').matches);
+    stage = new NGL.Stage(host, {backgroundColor: dark() ? '#15171a' : '#f4f6f6', sampleLevel:1});
+    // Theme is checked on every redraw; resize listener is installed once.
+  }
+  const viewerStage = stage;
+  const camera = keepView && viewerStage.viewerControls ? viewerStage.viewerControls.getOrientation() : null;
+  stage.removeAllComponents();
+  if(viewerColour) NGL.ColormakerRegistry.removeScheme(viewerColour);
+  viewerColour = null;
+  const response = await fetch(`/api/fold/${foldId}/pdb`);
+  if(!response.ok) throw new Error(`Structure download failed (${response.status}).`);
+  const blob = await response.blob();
+  if(generation !== viewerGeneration) return;
+  const component = await viewerStage.loadFile(blob, {ext:'pdb'});
+  if(generation !== viewerGeneration) return;
+  viewerResidues=structureAnalysis?.residues||[];
+  const index = residueIndex(structureAnalysis);
+
+  // Residues the analysis never reached are painted NOT_ASSESSED, not given
+  // a plausible-looking default. The previous fallback substituted rsa 0.4
+  // for a missing value, which rendered an unassessed residue in the middle
+  // of the ramp -- a colour indistinguishable from a real, mild result. A
+  // reader cannot tell a measurement from a placeholder by looking, so the
+  // placeholder has to look like nothing.
+  // Count atoms once. NGL calls atomColor repeatedly while tessellating a
+  // surface, so incrementing inside that callback inflated the missing count.
+  window.__atlasUnassessed = countUnassessedAtoms(component.structure, index, mode);
+  const colour = NGL.ColormakerRegistry.addScheme(function(){
+    this.atomColor = atom => {
+      const e = index.get(`${atom.chainname}:${atom.resno}${atom.inscode||''}`);
+      if(mode==='plain')  return atom.chainname==='H' ? 0x4a7fa5 : 0x8fb8c9;
+      if(!e) return NOT_ASSESSED;
+      if(mode==='cdr')    return String(e.region||'').startsWith('CDR') ? 0xd64354 : 0xbfcdd4;
+      if(mode==='ptm')    return e.flagged==='high' ? 0xa8505b
+                               : e.flagged ? 0xd8a13f : 0xc3ced4;
+      // Glycine has no side chain, so a missing side-chain SASA there is a
+      // fact about glycine and not a gap in the analysis.
+      if(typeof e.rsa !== 'number'){
+        if(e.aa !== 'G') return NOT_ASSESSED;
+        return mode==='charge' ? bandColour(CHARGE_SCALE, 0) : bandColour(HYDRO_SCALE, 0);
+      }
+      if(mode==='charge') return bandColour(CHARGE_SCALE, chargeScore(e.aa, e.rsa));
+      return bandColour(HYDRO_SCALE, hydroScore(e.aa, e.rsa));
+    };
+  }, 'atlas');
+  viewerColour = colour;
+  // One colour scheme, several ways of drawing it. Keeping these orthogonal
+  // means switching from ribbon to spacefill does not lose the property you
+  // were looking at, which is the whole reason for having both.
+  switch(style){
+    case 'spacefill':
+      component.addRepresentation('spacefill', {color:colour, radiusScale:1.0});
+      break;
+    case 'surface':
+      // Solvent-excluded surface. 'av' is slower but shows grooves honestly;
+      // the ribbon underneath stays visible through the transparency.
+      component.addRepresentation('surface', {color:colour, surfaceType:'av',
+        probeRadius:1.4, opacity:0.78, side:'front', useWorker:true});
+      component.addRepresentation('cartoon', {color:colour, smoothSheet:true, opacity:0.55});
+      break;
+    case 'ballstick':
+      component.addRepresentation('ball+stick', {sele:'not hydrogen', color:colour,
+        radiusScale:0.75, aspectRatio:1.8});
+      break;
+    case 'licorice':
+      component.addRepresentation('licorice', {sele:'not hydrogen', color:colour,
+        radiusScale:0.8});
+      break;
+    case 'backbone':
+      component.addRepresentation('backbone', {color:colour, radiusScale:1.6});
+      break;
+    default:
+      component.addRepresentation('cartoon', {color:colour, smoothSheet:true});
+      component.addRepresentation('licorice', {sele:'sidechainAttached and not hydrogen',
+                                               color:colour, radiusScale:0.5, opacity:0.85});
+  }
+  // Surface geometry is built asynchronously. Keep its colour scheme and
+  // loading state alive until NGL finishes; disposal cancels this wait.
+  if(viewerStage.tasks){
+    await new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = error => {
+        if(settled) return;
+        settled = true; clearTimeout(timer); viewerWaitCancel = null;
+        error ? reject(error) : resolve();
+      };
+      const timer = setTimeout(() => finish(new Error('Structure display timed out.')), 60000);
+      viewerWaitCancel = () => finish();
+      viewerStage.tasks.onZeroOnce(() => finish());
+    });
+  }
+  if(generation !== viewerGeneration) return;
+  // Only frame the molecule the first time. Re-framing on every style change
+  // would throw away an orientation the user had just set up.
+  if(keepView && camera) stage.viewerControls.orient(camera);
+  else component.autoView();
+
+  // Clicking a residue answers "what am I looking at", which until now the
+  // viewer could not say at all: the colours were legible only in aggregate.
+  // Every value shown here is carried from the same index the colours use,
+  // so the readout and the picture cannot disagree.
+  stage.signals.clicked.removeAll();
+  stage.signals.clicked.add(pickingProxy => {
+    const box = document.getElementById('viewer-pick');
+    if(!box) return;
+    if(!pickingProxy || !pickingProxy.atom){ box.innerHTML = PICK_HINT; return; }
+    const atom = pickingProxy.atom;
+    const e = index.get(`${atom.chainname}:${atom.resno}${atom.inscode||''}`);
+    if(!e){
+      box.innerHTML = `<b>${esc(atom.chainname)} ${esc(atom.resname)}${esc(atom.resno)}</b>
+        <span class="pick-na">not assessed \u2014 the analysis did not reach this residue</span>`;
+      return;
+    }
+    if(window.AtlasWorkspace && e.sequence_position!=null)window.AtlasWorkspace.selectPosition(atom.chainname,e.sequence_position,false);
+    const bits = [];
+    if(e.imgt) bits.push(`IMGT ${esc(e.imgt)}`);
+    if(e.region) bits.push(esc(e.region));
+    if(typeof e.rsa === 'number'){
+      bits.push(`exposure ${e.rsa.toFixed(2)}`);
+      bits.push(`exposed hydrophobicity ${hydroScore(e.aa, e.rsa).toFixed(2)}`);
+      bits.push(`exposed charge ${chargeScore(e.aa, e.rsa).toFixed(2)}`);
+    } else if(e.aa === 'G'){
+      bits.push('glycine \u2014 no side chain to expose');
+    } else {
+      bits.push('exposure not assessed');
+    }
+    if(e.flagged) bits.push(`<span class="pick-flag">flagged: ${esc(e.flagged)} priority</span>`);
+    box.innerHTML = `<b>${esc(atom.chainname)} ${esc(e.aa || atom.resname)}${esc(atom.resno)}</b> `
+      + bits.join(' \u00b7 ');
+  });
+  // Honour a focus requested from a table before this draw.
+  if(window.__atlasFocus) focusResidue(window.__atlasFocus);
+  // Keep the colour registration until these representations are removed.
+}
+
+function parseVariants(text){
+  // 'H:W107F' or 'name = H:W107F, L:D50E'. One candidate per line.
+  const variants = [], errors = [];
+  const token = /^([HL])\s*[:\s]\s*([A-Z])(\d+)([A-Z])$/i;
+  for(const raw of String(text||'').split('\n')){
+    const line = raw.trim();
+    if(!line) continue;
+    let name = null, body = line;
+    const named = line.split('=');
+    if(named.length === 2){ name = named[0].trim(); body = named[1].trim(); }
+    const mutations = [];
+    for(const part of body.split(',')){
+      const m = token.exec(part.trim().replace(/\s+/g,''));
+      if(!m){ errors.push(`Could not read "${part.trim()}". Use chain:fromPositionTo, for example H:W107F.`); continue; }
+      mutations.push({chain:m[1].toUpperCase(), position:parseInt(m[3],10),
+                      from_aa:m[2].toUpperCase(), to_aa:m[4].toUpperCase()});
+    }
+    if(mutations.length) variants.push({name: name || body, mutations});
+  }
+  return {variants, errors};
+}
+
+function deltaCell(entry){
+  if(!entry || entry.status!=='available' || entry.delta==null)
+    return '<span class="delta-flat">–</span>';
+  const d = entry.delta;
+  const cls = Math.abs(d) < 1e-9 ? 'delta-flat' : d > 0 ? 'delta-up' : 'delta-down';
+  const sign = d > 0 ? '+' : '';
+  return `<span class="${cls}">${sign}${Number(d).toFixed(2)}</span>`
+       + `<div class="h" style="font-size:10.5px">${entry.baseline} → ${entry.candidate}</div>`;
+}
+
+function renderVariants(state, target){
+  if(window.AtlasEngineering) return window.AtlasEngineering.renderComparison(state,target);
+  const rows = (state.results||[]).map(r => {
+    const comp = r.comparison || {};
+    if(r.status !== 'complete')
+      return `<tr><td><b>${esc(r.name)}</b></td><td colspan="6">${esc(r.error || r.model_status || 'not completed')}</td></tr>`;
+    const muts = (comp.mutations||[]).map(m =>
+      `${esc(m.chain)} ${esc(m.from)}${esc(m.position)}${esc(m.to)}`).join(', ');
+    const H = ((comp.chains||{}).H||{}).metrics||{};
+    const L = ((comp.chains||{}).L||{}).metrics||{};
+    const ptm = comp.ptm||{};
+    const removed = (ptm.removed||[]).length, added = (ptm.added||[]).length;
+    const ptmCell = `${removed?`<span class="delta-down">−${removed}</span>`:''}`
+                  + `${removed&&added?' / ':''}`
+                  + `${added?`<span class="delta-up">+${added}</span>`:''}`
+                  + `${!removed&&!added?'<span class="delta-flat">no change</span>':''}`;
+    return `<tr>
+      <td><b>${esc(r.name)}</b></td><td>${esc(muts)}</td>
+      <td>${deltaCell(H.isoelectric_point)}</td>
+      <td>${deltaCell(H.net_charge_at_ph)}</td>
+      <td>${deltaCell(L.isoelectric_point)}</td>
+      <td>${ptmCell}</td>
+      <td style="font-size:12px">${esc(comp.conclusion||'')}</td></tr>`;
+  }).join('');
+  const notes = new Set();
+  for(const r of state.results||[]) for(const n of ((r.comparison||{}).engineering_notes)||[]) notes.add(n);
+  target.innerHTML = `<table class="full" style="margin-top:12px"><thead><tr>
+      <th>Candidate</th><th>Substitutions</th><th>H pI Δ</th><th>H charge Δ</th><th>L pI Δ</th>
+      <th>PTM flags</th><th>Read-out</th></tr></thead><tbody>${rows}</tbody></table>
+    ${notes.size?`<p class="note">${[...notes].map(esc).join(' ')}</p>`:''}
+    <p class="note">${esc(state.note||'')}</p>`;
+}
+
+function wireTools(analysis, fixes, foldId, structureAnalysis, structureSource='predicted'){
+  const resultGeneration=viewerGeneration;
+  const analysisIsotype=document.getElementById('isotype').value||'fv';
+  if(window.AtlasEngineering) window.AtlasEngineering.configure({analysis,foldId,structureAnalysis,isotype:analysisIsotype,loadNGL,structureSource});
+  const host = document.getElementById('viewer-host');
+  const panel = (host && host.closest('details')) || document.getElementById('tool-structure');
+  if(panel && foldId){
+    const SURFACE_MODES = new Set(['hydrophobic', 'charge']);
+    const styleFor = m => SURFACE_MODES.has(m) ? 'surface' : 'cartoon';
+    let mode = 'hydrophobic';
+    let style = styleFor(mode);
+    // Once the reader picks a style themselves, stop overriding it: they are
+    // then driving, and silently switching back is worse than a bad default.
+    let styleChosen = false;
+    let shown = false, busy = false;
+    const note = document.getElementById('viewer-note');
+    const draw = (keepView) => {
+      if(busy) return;
+      const generation = viewerGeneration;
+      busy = true;
+      const controls = [...panel.querySelectorAll('.viewer-controls button')];
+      controls.forEach(b => b.disabled = true);
+      // Spacefill and especially the solvent-excluded surface take a moment on
+      // a whole Fv, and a viewer that simply freezes looks broken.
+      if(note && (style === 'surface' || style === 'spacefill'))
+        note.textContent = 'Building the ' + (style === 'surface' ? 'molecular surface' : 'space-filling view') + '…';
+      return showStructure(foldId, structureAnalysis, mode, style, keepView)
+        .catch(e => { if(generation !== viewerGeneration) return; const v=document.getElementById('viewer');
+                      if(v){ resetStructureViewer(); v.innerHTML = `<p class="note" style="padding:14px">${esc(e.message||e)} Choose a display mode to retry.</p>`; if(note) note.textContent = 'Structure display unavailable.'; } })
+        .then(() => { if(generation === viewerGeneration) legend(); })   // the unassessed count is only known after the draw
+        .finally(() => {
+          busy = false;
+          controls.forEach(b => b.disabled = false);
+          if(generation === viewerGeneration && note) note.textContent = structureViewerNote(structureSource);
+        });
+    };
+    const legend = () => {
+      const box = document.getElementById('viewer-legend');
+      if(box) box.innerHTML = viewerLegend(mode, window.__atlasUnassessed || 0);
+    };
+    legend();
+    const pick = document.getElementById('viewer-pick');
+    if(pick) pick.innerHTML = PICK_HINT;
+    const drawOnce = () => { if(panel.open && !shown && !host.closest('[hidden]')){ shown = true; draw(false); } };
+    panel.addEventListener('toggle', drawOnce);
+    const onView=()=>{if(resultGeneration!==viewerGeneration)return;drawOnce();if(stage)stage.handleResize();};
+    window.addEventListener('atlas:viewchange',onView);
+    viewerCleanups.push(()=>window.removeEventListener('atlas:viewchange',onView));
+    drawOnce();   // a panel that starts open never fires toggle
+    const press = (group, button) => [...group.querySelectorAll('button')].forEach(b =>
+      b.setAttribute('aria-pressed', String(b === button)));
+    const modes = document.getElementById('viewer-modes');
+    if(modes) modes.addEventListener('click', event => {
+      const button = event.target.closest('button[data-mode]');
+      if(!button || busy) return;
+      mode = button.dataset.mode;
+      press(modes, button);
+      legend();
+      if(!styleChosen){
+        style = styleFor(mode);
+        const target = styles && styles.querySelector(`button[data-style="${style}"]`);
+        if(target) press(styles, target);
+      }
+      if(shown) draw(true);
+    });
+    const styles = document.getElementById('viewer-styles');
+    if(styles) styles.addEventListener('click', event => {
+      const button = event.target.closest('button[data-style]');
+      if(!button || busy) return;
+      style = button.dataset.style;
+      styleChosen = true;
+      press(styles, button);
+      if(shown) draw(true);
+    });
+  }
+
+  const save = (name, payload) => event => {
+    event.preventDefault();
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
+    const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  };
+  const j = document.getElementById('dl-json');   if(j) j.onclick = save('analysis.json', analysis);
+  const f = document.getElementById('dl-fixes');  if(f) f.onclick = save('fix_proposals.json', fixes);
+
+  // PDF downloads. The report endpoint rebuilds from the stored analysis, so
+  // only its id travels: nothing re-runs and no sequence is sent again.
+  for(const [id, style, label] of [['dl-brief', 'brief', 'brief'],
+                                   ['dl-report', 'full', 'report']]){
+    const link = document.getElementById(id);
+    if(!link) continue;
+    link.onclick = async (event) => {
+      event.preventDefault();
+      const status = document.getElementById('dl-status');
+      if(status) status.textContent = 'Building the ' + label + '\u2026';
+      try{
+        const res = await fetch('/api/report', {method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({analysis_id: analysis.analysis_id, style: style,
+                                fold_job_id: foldId || null,
+                                title: 'Developability ' + label})});
+        if(!res.ok){
+          const detail = await res.json().catch(()=>({}));
+          throw new Error(detail.detail || 'could not build the PDF');
+        }
+        const url = URL.createObjectURL(await res.blob());
+        const a = document.createElement('a');
+        a.href = url; a.download = 'antibody-developability-' + label + '.pdf'; a.click();
+        setTimeout(()=>URL.revokeObjectURL(url), 2000);
+        if(status) status.textContent = '';
+      }catch(e){ if(status) status.textContent = e.message || String(e); }
+    };
+  }
+
+  // --- variant comparison --------------------------------------------
+  document.getElementById('results').onclick = async event => {
+    const preview=event.target.closest('.preview-local');
+    if(preview){
+      if(!window.AtlasEngineering)return;
+      window.AtlasWorkspace.activate('engineer');
+      window.AtlasWorkspace.selectPosition(preview.dataset.chain,Number(preview.dataset.position),false);
+      preview.disabled=true;
+      try{await window.AtlasEngineering.previewLocal({chain:preview.dataset.chain,position:Number(preview.dataset.position),to:preview.dataset.to});}
+      finally{preview.disabled=false;}
+      return;
+    }
+    const button=event.target.closest('.addfix');if(!button)return;
+    const box=document.getElementById('variant-input');if(!box)return;
+    const line=button.dataset.fix;
+    const existing=box.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    if(!existing.includes(line))existing.push(line);
+    box.value=existing.join('\n');
+    if(window.AtlasWorkspace)window.AtlasWorkspace.activate('compare');
+    const panel=document.getElementById('tool-variants');if(panel)panel.open=true;
+    box.focus();
+  };
+
+  const vrun = document.getElementById('variant-run');
+  if(vrun) vrun.onclick = async () => {
+    const box = document.getElementById('variant-input');
+    const status = document.getElementById('variant-status');
+    const target = document.getElementById('variant-results');
+    const parsed = parseVariants(box.value);
+    if(parsed.errors.length){ status.innerHTML = parsed.errors.map(e=>`<span style="color:var(--high)">${esc(e)}</span>`).join('<br>'); return; }
+    if(!parsed.variants.length){ status.textContent = 'Add at least one substitution.'; return; }
+    if(parsed.variants.length > 8){ status.textContent = 'Up to 8 candidates per run.'; return; }
+    vrun.disabled = true; target.innerHTML = '';
+    status.textContent = `Running ${parsed.variants.length} candidate(s)…`;
+    try{
+      const started = await api('/api/variants', {
+        analysis_id: analysis.analysis_id, variants: parsed.variants,
+        run_structure: document.getElementById('variant-structure').checked,isotype:analysisIsotype});
+      let state = null;
+      for(let i=0;i<300;i++){
+        await new Promise(r=>setTimeout(r, 2000));
+        state = await api(`/api/variants/${started.id}`);
+        if(resultGeneration!==viewerGeneration)return;
+        status.textContent = state.progress || state.status;
+        if(state.status==='complete' || state.status==='failed') break;
+      }
+      if(!state || state.status!=='complete'){ status.textContent = (state&&state.error) || 'Comparison did not finish.'; return; }
+      await renderVariants(state, target); status.textContent = state.progress || '';
+    }catch(e){ status.innerHTML = `<span style="color:var(--high)">${esc(e.message||e)}</span>`; }
+    finally{ vrun.disabled = false; }
+  };
+
+  // --- PROPERMAB eligibility gate -------------------------------------
+  const gateBox = document.getElementById('propermab-gate');
+  const paintGate = s => {
+    if(!s.installed){
+      gateBox.innerHTML = `<p style="margin:0 0 8px">${esc(s.licence_summary)}</p>
+        <p class="note" style="margin:0">Not installed here, and nothing in this application requires it.
+        If you are eligible: <code>python setup/fetch_optional.py --propermab</code>.
+        See USE_TIERS.md for what you get without it.</p>`;
+      return;
+    }
+    if(s.affirmed){
+      gateBox.innerHTML = `<div class="verdict-line v-within"><div>
+          <b>Eligibility affirmed</b>Recorded ${esc((s.affirmed_at_utc||'').slice(0,19).replace('T',' '))} UTC.
+          PROPERMAB descriptors are computed for this installation.</div></div>
+        <p class="note">This records your statement; it verifies nothing and grants no rights.
+        Your licence is with Regeneron.</p>
+        <button class="ghost" id="propermab-revoke">Withdraw affirmation</button>`;
+      document.getElementById('propermab-revoke').onclick = async () => {
+        paintGate(await api('/api/propermab/eligibility', null, 'DELETE')); };
+      return;
+    }
+    gateBox.innerHTML = `<div class="verdict-line v-outside"><div>
+        <b>Withheld pending affirmation</b>${esc(s.licence_summary)}</div></div>
+      <p class="note">${esc(s.consequence)}</p>
+      <p style="margin:10px 0 6px;font-size:13.5px">To proceed, type exactly:
+        <code>${esc(s.required_phrase)}</code></p>
+      <div class="vrow">
+        <input id="propermab-statement" style="flex:1;min-width:280px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:13.5px" placeholder="${esc(s.required_phrase)}">
+        <button class="primary" id="propermab-affirm" style="padding:9px 16px;font-size:14px">Affirm</button>
+      </div><div id="propermab-error" class="note"></div>`;
+    document.getElementById('propermab-affirm').onclick = async () => {
+      const value = document.getElementById('propermab-statement').value;
+      try { paintGate(await api('/api/propermab/eligibility', {statement: value})); }
+      catch(e){ document.getElementById('propermab-error').innerHTML =
+        `<span style="color:var(--high)">${esc(e.message||e)}</span>`; }
+    };
+  };
+  if(gateBox) api('/api/propermab/eligibility').then(paintGate)
+    .catch(()=>{ gateBox.innerHTML = '<p class="note">Could not read eligibility status.</p>'; });
+
+  const methods = document.getElementById('methods-body');
+  if(methods) api('/api/methods').then(data => {
+    methods.innerHTML = Object.values(data.assessments||{}).filter(Boolean).map(a => `
+      <p class="cite" style="margin:0 0 10px"><b>${esc(a.label)}</b>${esc(a.basis)}.
+      ${esc((a.methods||[]).join(', '))}.
+      ${a.primary_url?` <a href="${esc(a.primary_url)}" target="_blank" rel="noopener">${esc(a.primary_title||'source')}</a>`:''}
+      ${a.local_rule?` ${esc(a.local_rule)}`:''}</p>`).join('')
+      + `<p class="note">${esc(data.note||'')}</p>`;
+  }).catch(()=>{ methods.innerHTML = '<p class="note">Could not load method sources.</p>'; });
+}
+</script>
+</body>
+</html>

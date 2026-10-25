@@ -1,0 +1,27 @@
+name: Prepare release downloads
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (for example 0.1.0-rc1)'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build checked source archives
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: python tools/build_release.py --version "$RELEASE_VERSION" --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-downloads
+          path: dist/*
+          if-no-files-found: error

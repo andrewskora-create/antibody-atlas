@@ -1,0 +1,110 @@
+name: tests
+
+# The suite is the compliance gate as much as the correctness gate: it is what
+# catches a reference corpus or a restricted component leaking into a clone.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  launcher:
+    name: launcher on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install 'pytest>=8,<9'
+      - run: python -m pytest tests/test_launcher.py -q
+      - run: bash -n run_local.sh "Start Antibody Atlas.command"
+      - run: python run.py --check
+
+  suite:
+    name: python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      # Legacy ANARCI shells out to hmmscan, and ImmuneBuilder numbers its
+      # input through legacy ANARCI. Without this the structure-dependent
+      # tests do not fail cleanly, they fail confusingly.
+      - name: Install HMMER
+        run: sudo apt-get update && sudo apt-get install -y hmmer
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # CPU torch only. The default wheel pulls ~2 GB of CUDA that no CI
+          # runner can use.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+          # The same file the README and CONTRIBUTING tell a clone to use,
+          # so CI cannot pass on dependencies a fresh install does not get.
+          pip install -r requirements-dev.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run browser logic regressions
+        run: |
+          for test in tests/*.cjs; do node "$test"; done
+
+      # DeepSP is MIT and the whole point is that anyone can install it, so CI
+      # installs it too. The fetch verifies the Keras-to-numpy conversion
+      # against upstream's published output and exits non-zero if it drifted,
+      # which is how an upstream model change gets noticed here rather than in
+      # someone's results.
+      - name: Fetch and verify DeepSP
+        run: python setup/fetch_deepsp.py
+
+      - name: Diagnostics
+        run: python scripts/doctor.py
+        continue-on-error: true
+
+      # Tests covering the non-redistributed corpora and PROPERMAB skip here,
+      # by design: CI runs as a fresh clone does, and a fresh clone must not
+      # report failures for data it was never given.
+      - name: Run tests
+        run: python -m pytest tests/ -q --durations=10
+
+  export:
+    name: publishable export
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The export tool is the gate that keeps restricted sequences, molecule
+      # names and non-redistributable corpora out of a public tree, and that
+      # asserts the files the app needs at runtime are actually present. It
+      # must keep working on a clean checkout, not just on the maintainer's
+      # machine.
+      - name: Build and verify the export
+        run: python tools/make_oss_export.py --out /tmp/atlas-export

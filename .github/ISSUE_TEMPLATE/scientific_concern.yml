@@ -1,0 +1,31 @@
+name: Scientific concern
+description: A method, threshold, or claim in the output looks wrong or overstated.
+labels: [science]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        These are the most valuable issues this project gets. The failure mode
+        it most wants to avoid is a heuristic that reads as a prediction, and
+        an outside reader is far better placed to notice that than the author.
+  - type: textarea
+    id: claim
+    attributes:
+      label: What the tool says
+      description: Quote the output, the attribution line, or the documentation.
+    validations:
+      required: true
+  - type: textarea
+    id: concern
+    attributes:
+      label: Why that is wrong or overstated
+      description: >-
+        What the method actually establishes, where the threshold really comes
+        from, or what the comparison does not support.
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Supporting reference, if there is one
+      description: A DOI is ideal. An argument from first principles is fine too.

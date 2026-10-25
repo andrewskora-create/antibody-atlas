@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Antibody Atlas · local developability workbench</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/variant_comparison.css">
+</head>
+<body>
+  <header class="topbar"><div class="brand"><span class="brand-mark">A<span>•</span>A</span><span>Antibody Atlas</span></div><div class="top-status"><span class="status-dot"></span><span id="health">Checking local engines…</span></div></header>
+  <main>
+    <section class="intro"><div><div class="eyebrow">LOCAL ANTIBODY WORKBENCH / V0.1</div><h1>Read the sequence.<br><em>See the liabilities.</em></h1><p>Number variable domains, locate CDRs, compare human frameworks, and screen sequence properties in one inspectable report.</p></div><div class="helix" aria-hidden="true"><div class="strand one"></div><div class="strand two"></div></div></section>
+    <section class="workspace">
+      <aside class="input-panel">
+        <div class="panel-head"><span>Input</span><button id="example" class="text-button" type="button">Load example</button></div>
+        <label for="heavy">Heavy chain <small>VH / VHH</small></label><textarea id="heavy" spellcheck="false" placeholder="Paste a heavy-chain variable-domain amino-acid sequence or single FASTA record"></textarea>
+        <label for="light">Light chain <small>VL · optional</small></label><textarea id="light" spellcheck="false" placeholder="Paste a kappa or lambda variable-domain sequence"></textarea>
+        <div class="controls"><div><label for="scheme">CDR definition</label><select id="scheme"><option value="imgt">IMGT</option><option value="kabat">Kabat</option></select></div><div><label for="ph">Charge pH</label><input id="ph" type="number" min="0" max="14" step="0.1" value="7.4"></div></div>
+        <button id="analyze" class="primary" type="button">Analyze antibody <span>→</span></button>
+        <p class="input-note">Analysis goes to this computer only. For confidential sequences, use a standard browser and keep them out of Codex chat. Input is limited to standard amino acids and one domain per field.</p>
+      </aside>
+      <div class="result-panel">
+        <div id="empty" class="empty"><div class="empty-icon">⌁</div><h2>Start with a variable domain</h2><p>Paste a sequence or load the example to see CDR boundaries, human V-gene identity, PTM motifs, and biophysical descriptors.</p></div>
+        <div id="results" hidden>
+          <div class="result-heading"><div><span class="eyebrow">ANALYSIS REPORT</span><h2>Sequence profile</h2></div><div class="export-actions"><button id="export" class="secondary" type="button">Download JSON ↓</button><button id="export-pdf" class="secondary" type="button">3-page summary PDF ↓</button></div></div>
+          <section class="detail-card assessment-card" aria-labelledby="assessment-title"><div class="section-title"><h3 id="assessment-title">Overall assessment</h3><span id="assessment-status" role="status">Preliminary</span></div><div id="assessment-text"></div><p class="footnote">Local evidence synthesis · updates as analyses complete. Source-linked therapeutic evidence is below.</p></section>
+          <section class="detail-card"><div class="section-title"><h3>Structure prediction</h3><span>Runs automatically on this computer</span></div><div class="structure-actions"><button id="fold" class="secondary" type="button">Retry structure analysis</button><span id="fold-status" role="status"></span></div></section>
+          <section id="structure-hypothesis" class="detail-card structure" hidden><div class="section-title"><h3>Structure hypothesis</h3><span>Local ImmuneBuilder + FreeSASA</span></div><p>Inspect a local single-model Fv with side chains, surface patches, and PTM sites. CDR-H3 and side-chain placement require particular care.</p><div id="surface-controls" class="surface-controls" hidden aria-label="Structure highlighting"><button type="button" data-mode="hydrophobic">Hydrophobic</button><button type="button" data-mode="positive">Positive charge</button><button type="button" data-mode="negative">Negative charge</button><button type="button" data-mode="ptm">PTM sites</button></div><div id="detail-controls" class="surface-controls" hidden aria-label="Atomic detail"><button type="button" data-detail="cartoon">Cartoon</button><button type="button" data-detail="sidechains" class="active">Side chains</button><button type="button" data-detail="surface">Molecular surface</button></div><div id="model-legend" class="model-legend" hidden><div class="legend-heading"><strong id="legend-title"></strong><div id="ptm-filter" class="ptm-filter" hidden><button type="button" data-ptm-filter="priority" class="active">Medium + high</button><button type="button" data-ptm-filter="all">All sites</button></div></div><div id="heat-legend" class="heat-legend"><span>Cold</span><i aria-hidden="true"></i><span>Hot</span></div><div id="ptm-legend" class="ptm-legend" hidden><span><i class="ptm-key high"></i>High priority</span><span><i class="ptm-key review"></i>Medium · review</span><span><i class="ptm-key lower"></i>Lower concern</span></div><p id="legend-explainer"></p></div><div id="structure-3d" hidden aria-label="Interactive atomic antibody structure"></div><div id="model-selection" class="model-selection" role="status" hidden></div><canvas id="structure-canvas" hidden aria-label="Rotatable backbone fallback"></canvas><p id="viewer-note" class="footnote" hidden></p><a id="pdb-link" class="download-link" hidden>Download PDB ↓</a><div id="structure-report" hidden><div id="structure-summary" class="structure-summary"></div><div class="structure-columns"><div><div class="section-title"><h3>Surface patches</h3><span>Exposed side chains</span></div><div id="patch-risk-assessment"></div><div id="patch-list" class="patch-list"></div></div><div><div class="section-title"><h3>PTM follow-up screen</h3><span>Folded-state context</span></div><div id="ptm-risk" class="ptm-risk"></div><details><summary>Selected PTM sites and exposure details</summary><h4>CDR sites</h4><div id="structural-ptm-cdr" class="structural-ptm-list"></div><h4>Framework sites</h4><div id="structural-ptm-framework" class="structural-ptm-list"></div><h4>Unassigned sites</h4><div id="structural-ptm-unassigned" class="structural-ptm-list"></div></details></div></div><p id="structure-method" class="footnote"></p></div></section>
+          <details class="detail-card"><summary>Sequence properties, CDRs and PTM details</summary>          <div id="chain-tabs" class="chain-tabs" role="tablist"></div>
+          <div class="metric-grid" id="metric-grid"></div>
+          <div class="section-title"><h3>Domain map</h3><span id="numbering-label"></span></div>
+          <div class="sequence-legend"><span><i class="key cdr1"></i>CDR1</span><span><i class="key cdr2"></i>CDR2</span><span><i class="key cdr3"></i>CDR3</span><span><i class="key framework"></i>Framework</span></div>
+          <div id="sequence-map" class="sequence-map" aria-label="Numbered amino-acid sequence"></div>
+          <div id="cdr-grid" class="cdr-grid"></div>
+          <div class="two-col"><section class="detail-card"><div class="section-title"><h3>Hydropathy</h3><span>7-residue sliding window</span></div><div id="hydro-chart" class="chart"></div><p id="aggregation-note" class="method-note"></p></section><section class="detail-card"><div class="section-title"><h3>PTM flags</h3><span>Sequence-level · selected chain</span></div><h4>CDR sites</h4><div id="cdr-ptm-list" class="ptm-list"></div><h4>Framework sites</h4><div id="framework-ptm-list" class="ptm-list"></div><h4>Unassigned sites</h4><div id="unassigned-ptm-list" class="ptm-list"></div></section></div>
+          <section class="detail-card humanness"><div class="section-title"><h3>Human framework identity</h3><span>Numbered IMGT position audit</span></div><div id="human-detail"></div></section>
+</details>
+
+          <section class="detail-card"><div class="section-title"><h3>Local prediction profilers</h3><span>Run automatically after structure</span></div><div class="structure-actions"><button id="antiberty" class="secondary" type="button">Rerun AntiBERTy locally</button><span id="antiberty-status" role="status"></span></div><div id="antiberty-result"></div><div class="propermab-panel"><h4>PROPERMAB · local academic research</h4><p class="footnote">Run the authors' descriptors on paired VH/VL. Automatic structure analysis must finish before running structural descriptors.</p><div class="structure-actions"><button id="propermab" class="secondary" type="button">Rerun PROPERMAB locally</button><span id="propermab-status" role="status"></span></div><div id="propermab-result"></div></div><div id="tap-context" class="footnote"></div><div class="tap-handoff"><strong>Official TAP web profiler</strong><p>The Oxford TAP site runs its five descriptors after you submit paired VH and VL there. Copy a chain below, open TAP, then paste and submit only if you choose to share those sequences with Oxford.</p><div class="structure-actions"><button id="copy-tap-heavy" class="secondary" type="button">Copy VH</button><button id="copy-tap-light" class="secondary" type="button">Copy VL</button><a id="open-tap" class="download-link" href="https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabpred/tap" target="_blank" rel="noopener noreferrer">Open official TAP ↗</a></div><span id="tap-copy-status" role="status"></span></div></section>
+          <section id="variant-comparison" class="detail-card variant-comparison" aria-labelledby="variant-title">
+            <div class="section-title"><h3 id="variant-title">Compare variants with the original</h3><span>Local batch analysis</span></div>
+            <p class="variant-intro">Test your own substitutions or paste full candidate sequences. Each candidate is compared with the original you analyzed above. Sequence positions below are 1-based positions in the pasted input, not IMGT or Kabat numbers.</p>
+            <div class="variant-mode" role="group" aria-label="Candidate input type"><button id="variant-mode-mutations" class="active" type="button" aria-pressed="true">Substitutions</button><button id="variant-mode-sequences" type="button" aria-pressed="false">Full sequences</button></div>
+            <div id="variant-mutations-input"><label for="variant-mutations">One candidate per line: name | substitutions</label><textarea id="variant-mutations" spellcheck="false" placeholder="N35Q | H:N35Q&#10;Pair A | H:N35Q,L:M20L"></textarea><p class="footnote">Syntax: H:N35Q or L:M20L. Comma-separate mutations in one candidate. First compare single substitutions; combinations may interact and need their own measurements.</p></div>
+            <div id="variant-sequences-input" hidden><label for="variant-sequences">One candidate per line: name | VH | VL</label><textarea id="variant-sequences" spellcheck="false" placeholder="Candidate A | EVQL… | DIQMT…"></textarea><p class="footnote">Paste complete variable-domain sequences using standard one-letter amino acids. Use an empty VL field only when the original has no VL. Candidates must have the same chains and lengths as the original; this comparison supports substitutions only.</p></div>
+            <div class="variant-options"><label><input id="variant-run-structure" type="checkbox"> Fold each candidate for structural context</label><label><input id="variant-run-antiberty" type="checkbox"> Run local AntiBERTy</label><label><input id="variant-run-propermab" type="checkbox"> Run local PROPERMAB</label></div>
+            <p class="footnote">Optional models may take longer. Structural differences require a separate fold for each candidate. PROPERMAB uses a fold for each candidate, so selecting it also enables structure analysis. An unavailable model stays unassessed. No composite score or automatic variant rank is assigned.</p>
+            <div class="variant-actions"><button id="variant-run" class="secondary" type="button">Compare up to 8 candidates</button><span id="variant-status" role="status"></span></div>
+            <div id="variant-error" class="error" role="alert" hidden></div><div id="variant-results" aria-live="polite"></div>
+          </section>
+          <section class="detail-card"><div class="section-title"><h3>Therapeutic PTM precedents</h3><span>Matched to your input sequence</span></div><div id="clinical-frameworks"></div><h4>Experimentally documented PTM matches</h4><div id="ptm-precedents"></div><div id="external-lookup"></div></section><section class="detail-card"><div class="section-title"><h3>Scientific methods and sources</h3><span>Versioned local implementation</span></div><div id="method-sources"></div></section>
+        </div>
+        <div id="error" class="error" role="alert" hidden></div>
+      </div>
+    </section>
+    <footer><span>Antibody Atlas · local research tool</span><span>Sequence screens support triage; confirm biological conclusions experimentally.</span></footer>
+  </main>
+  <script src="/static/vendor/ngl/ngl.js"></script>
+  <script src="/static/external_lookup.js"></script>
+  <script src="/static/outcome_summary.js"></script>
+  <script src="/static/profiler_scale.js"></script>
+  <script src="/static/clinical_frameworks.js"></script>
+  <script src="/static/antiberty_report.js"></script>
+  <script src="/static/app.js"></script>
+  <script src="/static/variant_comparison.js"></script>
+</body>
+</html>

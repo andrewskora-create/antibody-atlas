@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');
+const {positionFor,paneFor}=require('../static/workspace.js');
+const analysis={chains:{H:{sequence:'ACDEF'},L:{sequence:'WYG'}},residue_table:{rows:[{chain:'H',sequence_position:3,imgt:'H112A'},{chain:'L',sequence_position:1,imgt:'1'}]}};
+assert.equal(positionFor(analysis,'H','112a','imgt'),3);
+assert.equal(positionFor(analysis,'L','1','imgt'),1);
+assert.equal(positionFor(analysis,'H','5','sequence'),5);
+for(const p of ['0','6','2.1','2foo','-1',''])assert.throws(()=>positionFor(analysis,'H',p,'sequence'));
+assert.throws(()=>positionFor(analysis,'H','112','imgt'),/absent/);
+assert.throws(()=>positionFor(analysis,'X','1','sequence'),/not part/);
+assert.equal(paneFor('sec-explore-substitutions-at-a-position'),'engineer');
+assert.equal(paneFor('sec-3d-structure'),'engineer');
+assert.equal(paneFor('sec-surface-patches'),'overview');
+assert.equal(paneFor('sec-panel-comparison'),'evidence');
+console.log('Workspace numbering, chain validation and navigation tests passed');

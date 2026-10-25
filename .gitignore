@@ -1,0 +1,43 @@
+# Analysis output must never be committed: it can contain unpublished sequences.
+/reports/
+/results/
+/out/
+/runs/
+*.pdb
+!tests/fixtures/*.pdb
+*.pdf
+!Public-hydrophobic-summary.pdf
+*_report.json
+*_propermab*.json
+
+# Reference data rebuilt locally from sources that do not grant redistribution.
+/data/clinical_frameworks.json
+/data/therapeutic_ptm_sequences.json
+/data/profiler_comparators.json
+/data/.cache/
+validation/.cocrystal_work/
+
+# Third-party components installed by the user under their own licence terms.
+/vendor/
+/native-source/
+/native-build/
+/models/antiberty/model.safetensors
+# DeepSP weights are MIT and could be committed, but they are 17 MB and
+# setup/fetch_deepsp.py rebuilds them verifiably from upstream.
+/models/deepsp/*.npz
+/models/deepsp/provenance.json
+/data/deepsp_reference.json
+
+# Environments, caches, editors
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+*.log
+
+# Locally recorded PROPERMAB eligibility affirmation (per installation).
+/.propermab_eligibility.json
+
+# Generated release archives
+/dist/

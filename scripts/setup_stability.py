@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+"""Install pinned MIT-licensed ThermoMPNN source and weights locally.
+
+Downloads model assets only; no user sequences or structures are uploaded.
+Runtime dependencies are numpy and torch, already included by Atlas modeling.
+"""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import urllib.request
+
+COMMIT = "370f76ec62bd929f7425e311d8df04a0d094990f"
+FILES = {'LICENSE': '038bd3438019e6dfe2c02efaea630ef46e60f07aad542d4a8440c40a67d61aab', 'protein_mpnn_utils.py': '3bbcb4342482438bb5d4ebe6509d514490dfce804617865fa55ffdcbda2fea12', 'model_utils.py': '20d941bd3e1b94c150a267609c237ee0c920df5dadaa2ce682c5ddb20482bbbe', 'transfer_model.py': 'cddf49a119316785aca7e2653d25ebc37a436fda7655a43b7f634040e6dd92e2', 'models/thermoMPNN_default.pt': 'af449118ccfb4e34971d802321907ed82a8a035ae80f055bf8fc56009a4a838a', 'vanilla_model_weights/v_48_020.pt': 'c9cb4a671d79604111231f8dbfc7c590e06f1197453b7a6854ac6661a642f5bd', 'licenses/ProteinMPNN.txt': '82009d25ce585631f452b2b24589bdb29c559ccfefa2f200ef312ed5b501a586', 'licenses/GraphProteinDesign.txt': '131ea36feb4a43713cd0c192589e745705bff0c1cb65ab6513b28cc41300dc30', 'licenses/LightAttention.txt': '4f36471eb176a6443b1c9d8d713168d92ccb563b520d3d5be3f2151010bd51f9'}
+SOURCES = {'licenses/ProteinMPNN.txt': 'https://raw.githubusercontent.com/dauparas/ProteinMPNN/8907e6671bfbfc92303b5f79c4b5e6ce47cdef57/LICENSE', 'licenses/GraphProteinDesign.txt': 'https://raw.githubusercontent.com/jingraham/neurips19-graph-protein-design/22e497a2b565fe82f17e12ea37e89dcf4e50e92f/LICENSE', 'licenses/LightAttention.txt': 'https://raw.githubusercontent.com/HannesStark/protein-localization/7b0be1e64a91db8ad1a8feae994a4d09aa9d7b1b/LICENSE'}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--directory", type=Path, default=Path(__file__).resolve().parents[1] / "vendor" / "thermompnn")
+    args = parser.parse_args()
+    base = f"https://raw.githubusercontent.com/Kuhlman-Lab/ThermoMPNN/{COMMIT}/"
+    for filename, expected in FILES.items():
+        target = args.directory / filename
+        if target.is_file() and hashlib.sha256(target.read_bytes()).hexdigest() == expected:
+            continue
+        with urllib.request.urlopen(SOURCES.get(filename, base + filename), timeout=120) as response:
+            content = response.read()
+        if hashlib.sha256(content).hexdigest() != expected:
+            raise RuntimeError(f"Checksum mismatch for {filename}; no unverified file installed.")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_suffix(target.suffix + ".download")
+        temporary.write_bytes(content)
+        temporary.replace(target)
+    (args.directory / "SOURCE_MANIFEST.json").write_text(json.dumps({"repository": "https://github.com/Kuhlman-Lab/ThermoMPNN", "commit": COMMIT, "sha256": FILES, "additional_sources": SOURCES}, indent=2) + "\n")
+    print(f"Verified local ThermoMPNN installation: {args.directory}")
+
+if __name__ == "__main__":
+    main()

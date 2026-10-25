@@ -1,0 +1,38 @@
+# Core. All permissively licensed; see THIRD_PARTY_NOTICES.md.
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+python-multipart>=0.0.9,<1   # file upload for experimental structures
+biopython>=1.84,<2
+anarcii>=2.0,<3
+ImmuneBuilder>=1.1,<2
+anarci>=2020.04.23
+pdbfixer>=1.12,<2
+freesasa>=2.2,<3
+# AntiBERTy 1.0.0 is the current upstream release, but PyPI is stale at 0.1.3,
+# which predates the safetensors checkpoint and the get_weights() resolver this
+# project uses. Install from the authors' repository, pinned to a commit.
+antiberty @ git+https://github.com/jeffreyruffolo/AntiBERTy@1f7478450dee58557185b8d5ca0f1eb32bd3c30c
+reportlab>=4.2,<5
+Pillow>=10,<13
+matplotlib>=3.8,<4          # offline structure figure for headless reports
+
+# Paratope prediction (BSD-3-Clause). Not on PyPI; installed from the authors'
+# repository. Optional: without it the screen still runs and the antigen-contact
+# column reports as unavailable rather than failing.
+Paragraph @ git+https://github.com/oxpig/Paragraph@1052d66faf52a18460e4624d12ad0bcac0803d75
+
+# DeepSP needs nothing at runtime beyond numpy, which is already a core
+# dependency. h5py is needed only by setup/fetch_deepsp.py, to read the
+# authors' Keras checkpoints once and convert them; the converted .npz files
+# are read by numpy alone. It is therefore not listed as a core requirement:
+#   pip install h5py && python setup/fetch_deepsp.py
+#
+# NOT listed here, by design:
+#   PROPERMAB  - Regeneron, academic research use only. Never install it from a
+#                requirements file; use setup/fetch_optional.py, which shows the
+#                licence and requires you to affirm eligibility. See USE_TIERS.md.
+#   NanoShaper, CGAL, APBS, PDB2PQR - needed only by the PROPERMAB path.
+#
+# HMMER is a system binary required by legacy ANARCI, not a Python package.
+#   macOS: brew install hmmer        Debian/Ubuntu: apt install hmmer
+#   Verify everything with: python scripts/doctor.py

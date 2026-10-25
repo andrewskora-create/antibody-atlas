@@ -1,0 +1,107 @@
+{
+  "copyright": "UniProtKB data are distributed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License. Copyright 2002-2026 UniProt Consortium. See https://www.uniprot.org/help/license",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "limitations": [
+    "Constant-region allotypes differ at charged positions and shift the computed pI; each entry is one allotype, not a consensus.",
+    "No glycan is modelled. Sialylated glycoforms carry negative charge that lowers the real pI, and the C-terminal lysine of the heavy chain is usually clipped in product.",
+    "Engineering common in therapeutics (IgG4 S228P, Fc silencing, half-life or charge variants) is not applied."
+  ],
+  "redistribution": "Permitted with the copyright notice reproduced; this file ships in-tree.",
+  "regions": {
+    "IGHG1": {
+      "accession": "P01857-1",
+      "key": "IGHG1",
+      "kind": "heavy",
+      "label": "IgG1",
+      "length": 330,
+      "note": "Most common therapeutic isotype. Allotypes (G1m) differ at a small number of positions, some of them charged; this is the UniProt canonical sequence.",
+      "sequence": "ASTKGPSVFPLAPSSKSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYICNVNHKPSNTKVDKKVEPKSCDKTHTCPPCPAPELLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVKFNWYVDGVEVHNAKTKPREEQYNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKALPAPIEKTISKAKGQPREPQVYTLPPSRDELTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSKLTVDKSRWQQGNVFSCSVMHEALHNHYTQKSLSLSPGK",
+      "sha256": "d922a9eda9e8b64ce762148360f43ca04cf98131a81930d706fdefdf98ba7d15"
+    },
+    "IGHG2": {
+      "accession": "P01859-1",
+      "key": "IGHG2",
+      "kind": "heavy",
+      "label": "IgG2",
+      "length": 326,
+      "note": "Shorter hinge with four cysteines; reduced effector function.",
+      "sequence": "ASTKGPSVFPLAPCSRSTSESTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSNFGTQTYTCNVDHKPSNTKVDKTVERKCCVECPPCPAPPVAGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVQFNWYVDGVEVHNAKTKPREEQFNSTFRVVSVLTVVHQDWLNGKEYKCKVSNKGLPAPIEKTISKTKGQPREPQVYTLPPSREEMTKNQVSLTCLVKGFYPSDISVEWESNGQPENNYKTTPPMLDSDGSFFLYSKLTVDKSRWQQGNVFSCSVMHEALHNHYTQKSLSLSPGK",
+      "sha256": "fd36059149e4baf0ad047897658c2156ef6a1f853c69d9d92416f1447a4aed0d"
+    },
+    "IGHG3": {
+      "accession": "P01860-1",
+      "key": "IGHG3",
+      "kind": "heavy",
+      "label": "IgG3",
+      "length": 377,
+      "note": "Long hinge and the most allotypic variation of the four subclasses, including hinge-length differences between allotypes. Treat this sequence as one allotype, not as representative.",
+      "sequence": "ASTKGPSVFPLAPCSRSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYTCNVNHKPSNTKVDKRVELKTPLGDTTHTCPRCPEPKSCDTPPPCPRCPEPKSCDTPPPCPRCPEPKSCDTPPPCPRCPAPELLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVQFKWYVDGVEVHNAKTKPREEQYNSTFRVVSVLTVLHQDWLNGKEYKCKVSNKALPAPIEKTISKTKGQPREPQVYTLPPSREEMTKNQVSLTCLVKGFYPSDIAVEWESSGQPENNYNTTPPMLDSDGSFFLYSKLTVDKSRWQQGNIFSCSVMHEALHNRFTQKSLSLSPGK",
+      "sha256": "46bf611acbb9889bba94d3303a99c938ffa4173575a130215823c6afe4178fc8"
+    },
+    "IGHG4": {
+      "accession": "P01861-1",
+      "key": "IGHG4",
+      "kind": "heavy",
+      "label": "IgG4",
+      "length": 327,
+      "note": "Therapeutic IgG4 is usually engineered with the S228P hinge substitution to prevent Fab-arm exchange; that substitution is NOT applied here.",
+      "sequence": "ASTKGPSVFPLAPCSRSTSESTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTKTYTCNVDHKPSNTKVDKRVESKYGPPCPSCPAPEFLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSQEDPEVQFNWYVDGVEVHNAKTKPREEQFNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKGLPSSIEKTISKAKGQPREPQVYTLPPSQEEMTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSRLTVDKSRWQEGNVFSCSVMHEALHNHYTQKSLSLSLGK",
+      "sha256": "4248d24fb1aa7ea1636840c0c99676b4cdee7057cefc6bd72bc3bbb5eb5be06c"
+    },
+    "IGKC": {
+      "accession": "P01834",
+      "key": "IGKC",
+      "kind": "light",
+      "label": "Kappa",
+      "length": 107,
+      "note": "Single human kappa constant region.",
+      "sequence": "RTVAAPSVFIFPPSDEQLKSGTASVVCLLNNFYPREAKVQWKVDNALQSGNSQESVTEQDSKDSTYSLSSTLTLSKADYEKHKVYACEVTHQGLSSPVTKSFNRGEC",
+      "sha256": "d591c34db571eedb43a8703ef3c4eec2b68b12c0a614bbc8f8a8e7d42febb272"
+    },
+    "IGLC1": {
+      "accession": "P0CG04",
+      "key": "IGLC1",
+      "kind": "light",
+      "label": "Lambda (IGLC1)",
+      "length": 106,
+      "note": "One of several lambda constant genes.",
+      "sequence": "GQPKANPTVTLFPPSSEELQANKATLVCLISDFYPGAVTVAWKADGSPVKAGVETTKPSKQSNNKYAASSYLSLTPEQWKSHRSYSCQVTHEGSTVEKTVAPTECS",
+      "sha256": "bd20a21a242db2b85bd3d1e9eb7985db8c6763865253e5695380047d04279dca"
+    },
+    "IGLC2": {
+      "accession": "P0DOY2",
+      "key": "IGLC2",
+      "kind": "light",
+      "label": "Lambda (IGLC2)",
+      "length": 106,
+      "note": "The lambda constant most used in therapeutics.",
+      "sequence": "GQPKAAPSVTLFPPSSEELQANKATLVCLISDFYPGAVTVAWKADSSPVKAGVETTTPSKQSNNKYAASSYLSLTPEQWKSHRSYSCQVTHEGSTVEKTVAPTECS",
+      "sha256": "c8527780068ed3a3d76646e2b203350b3d44f755e1cc7838b676533db72bcc88"
+    },
+    "IGLC3": {
+      "accession": "P0DOY3",
+      "key": "IGLC3",
+      "kind": "light",
+      "label": "Lambda (IGLC3)",
+      "length": 106,
+      "note": "Differs from IGLC2 at a small number of positions.",
+      "sequence": "GQPKAAPSVTLFPPSSEELQANKATLVCLISDFYPGAVTVAWKADSSPVKAGVETTTPSKQSNNKYAASSYLSLTPEQWKSHKSYSCQVTHEGSTVEKTVAPTECS",
+      "sha256": "0d50632346799b4c292bd08dd280e716cc170ffa9134dfe45804c2bd56fdd822"
+    },
+    "IGLC7": {
+      "accession": "A0M8Q6",
+      "key": "IGLC7",
+      "kind": "light",
+      "label": "Lambda (IGLC7)",
+      "length": 106,
+      "note": "A less common lambda constant gene.",
+      "sequence": "GQPKAAPSVTLFPPSSEELQANKATLVCLVSDFNPGAVTVAWKADGSPVKVGVETTKPSKQSNNKYAASSYLSLTPEQWKSHRSYSCRVTHEGSTVEKTVAPAECS",
+      "sha256": "6e113c8a829ab540f7135d17c9fdafbd360eee0124daf9fceb3a6e174009452d"
+    }
+  },
+  "retrieved_utc": "2026-10-11",
+  "source": "UniProtKB (reviewed/Swiss-Prot)",
+  "source_url": "https://www.uniprot.org/",
+  "uniprot_release": "2026_03"
+}

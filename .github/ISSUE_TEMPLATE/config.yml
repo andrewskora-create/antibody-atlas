@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Licensing and redistribution questions
+    url: https://github.com/REPLACE_WITH_OWNER/antibody-atlas/blob/main/COMPLIANCE.md
+    about: >-
+      Who may use PROPERMAB, why the clinical corpora are not shipped, and what
+      a recipient of this code has to do. Most licence questions are answered
+      there and in USE_TIERS.md.
+  - name: Security or data-handling report
+    url: https://github.com/REPLACE_WITH_OWNER/antibody-atlas/security/advisories/new
+    about: Report privately; do not open a public issue.

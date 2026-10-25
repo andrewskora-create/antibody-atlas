@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const ctx=vm.createContext({window:{}});vm.runInContext(fs.readFileSync('static/outcome_summary.js','utf8'),ctx);
+let result={features:[{key:'hyd_patch_area',label:'Hydrophobic patch area',value:0,unit:'Å²'},{key:'pos_patch_area',label:'Positive patch area',value:22,unit:'Å²'}],unavailable:[]};
+let html=ctx.window.propermabSurfaceReadout(result);
+assert(html.includes('0.0 Å²'));assert(html.includes('22.0 Å²'));assert(html.includes('Unavailable'));
+result={features:[],unavailable:[{feature:'APBS/NanoShaper surface patches',reason:'Explicit pipeline failure'}]};
+assert(ctx.window.propermabSurfaceReadout(result).includes('Explicit pipeline failure'));
+const repair={terminal_repair:{status:'complete',note:'Separate hypothesis',omitted_positions:{L:[108]},pdb_url:'/api/propermab/test/repaired-pdb',metrics:[{label:'Hydrophobic area',unit:'Å²',original:100,repaired:90,delta:-10}]}};
+html=ctx.window.propermabRepairReadout(repair);assert(html.includes('100.0'));assert(html.includes('90.0'));assert(html.includes('-10.0'));assert(html.includes('Separate hypothesis'));assert(html.includes('L: 108'));assert(html.includes('Download repaired PDB'));
+console.log('Prominent surface values, zero versus missing, failure reasons and repair comparison verified.');
